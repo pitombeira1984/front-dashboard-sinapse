@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SINAPSE - Dashboard de Monitoramento</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* RESET E VARIÁVEIS GLOBAIS */
+        :root {
+            --primary-color: #2563eb;    /* Azul confiança */
+            --secondary-color: #0ea5e9;  /* Azul claro */
+            --success-color: #10b981;    /* Verde saudável */
+            --warning-color: #f59e0b;    /* Amarelo atenção */
+            --danger-color: #dc2626;     /* Vermelho crítico */
+            --dark-color: #1e293b;       /* Azul escuro */
+            --light-color: #f8fafc;      /* Branco gelo */
+            --gray-color: #64748b;       /* Cinza */
+            
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        /* LAYOUT PRINCIPAL */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* SIDEBAR */
+        .sidebar {
+            width: 240px;
+            background-color: #1e293b;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #334155;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .logo-icon {
+            color: var(--primary-color);
+            font-size: 1.75rem;
+        }
+        
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #2563eb, #0ea5e9);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .nav-menu {
+            flex: 1;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: var(--border-radius);
+            text-decoration: none;
+            color: #cbd5e1;
+            transition: var(--transition);
+        }
+        
+        .nav-item:hover {
+            background-color: #334155;
+            color: white;
+        }
+        
+        .nav-item.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .nav-icon {
+            width: 20px;
+            text-align: center;
+        }
+        
+        .system-status {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--success-color);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        /* CONTEÚDO PRINCIPAL */
+        .main-content {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .header-title h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+        
+        .header-title p {
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .time-display {
+            background-color: #1e293b;
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius);
+            border: 1px solid #334155;
+            font-size: 0.875rem;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius);
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+        
+        /* KPI CARDS */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .kpi-card {
+            background-color: #1e293b;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            border: 1px solid #334155;
+            transition: var(--transition);
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--box-shadow);
+        }
+        
+        .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .kpi-title {
+            font-size: 0.875rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .kpi-icon {
+            font-size: 1.25rem;
+            color: var(--primary-color);
+        }
+        
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .kpi-trend {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.875rem;
+        }
+        
+        .trend-up {
+            color: var(--success-color);
+        }
+        
+        .trend-down {
+            color: var(--danger-color);
+        }
+        
+        /* ALERTAS */
+        .alerts-section {
+            background-color: #1e293b;
+            border-radius: var(--border-radius);
+            border: 1px solid #334155;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .badge-critical {
+            background-color: rgba(220, 38, 38, 0.1);
+            color: var(--danger-color);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+        }
+        
+        .alerts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background-color: rgba(30, 41, 59, 0.5);
+            border-radius: var(--border-radius);
+            border-left: 4px solid var(--danger-color);
+        }
+        
+        .alert-critical {
+            border-left-color: var(--danger-color);
+        }
+        
+        .alert-warning {
+            border-left-color: var(--warning-color);
+        }
+        
+        .alert-info {
+            border-left-color: var(--secondary-color);
+        }
+        
+        .alert-icon {
+            font-size: 1.25rem;
+        }
+        
+        .alert-critical .alert-icon {
+            color: var(--danger-color);
+        }
+        
+        .alert-content {
+            flex: 1;
+        }
+        
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .alert-description {
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+        
+        .alert-time {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+        
+        /* DISPOSITIVOS */
+        .devices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .device-card {
+            background-color: #1e293b;
+            border-radius: var(--border-radius);
+            border: 1px solid #334155;
+            padding: 1.5rem;
+        }
+        
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .device-name {
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+        
+        .device-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status-online {
+            color: var(--success-color);
+        }
+        
+        .status-offline {
+            color: var(--danger-color);
+        }
+        
+        .device-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .metric {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .metric-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-bottom: 0.25rem;
+        }
+        
+        .metric-value {
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+        
+        /* GRAFICO */
+        .chart-container {
+            background-color: #1e293b;
+            border-radius: var(--border-radius);
+            border: 1px solid #334155;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .chart-placeholder {
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(30, 41, 59, 0.5);
+            border-radius: var(--border-radius);
+            margin-top: 1rem;
+            color: #64748b;
+        }
+        
+        /* FOOTER */
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1.5rem;
+            border-top: 1px solid #334155;
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+        
+        .node-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* RESPONSIVIDADE */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 200px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                flex-direction: row;
+                padding: 1rem;
+                overflow-x: auto;
+            }
+            
+            .logo {
+                margin-bottom: 0;
+                border-bottom: none;
+                border-right: 1px solid #334155;
+                padding-right: 1rem;
+                margin-right: 1rem;
+            }
+            
+            .nav-menu {
+                display: flex;
+                gap: 0.5rem;
+            }
+            
+            .nav-item span:not(.nav-icon) {
+                display: none;
+            }
+            
+            .system-status {
+                display: none;
+            }
+            
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 640px) {
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .devices-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .header-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fas fa-brain logo-icon"></i>
+                <span class="logo-text">SINAPSE</span>
+            </div>
+            
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active">
+                    <i class="fas fa-tachometer-alt nav-icon"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-server nav-icon"></i>
+                    <span>Dispositivos</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-exclamation-triangle nav-icon"></i>
+                    <span>Alertas</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-chart-line nav-icon"></i>
+                    <span>Análise</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-cogs nav-icon"></i>
+                    <span>Configurações</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-history nav-icon"></i>
+                    <span>Histórico</span>
+                </a>
+            </nav>
+            
+            <div class="system-status">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>Sistema Operacional</span>
+                </div>
+                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.5rem;">
+                    Orange Pi 3B<br>
+                    4GB RAM • 64GB SSD
+                </div>
+            </div>
+        </aside>
+        
+        <!-- CONTEÚDO PRINCIPAL -->
+        <main class="main-content">
+            <!-- HEADER -->
+            <header class="header">
+                <div class="header-title">
+                    <h1>Dashboard de Monitoramento</h1>
+                    <p>Monitoramento preditivo em tempo real • Edge Computing</p>
+                </div>
+                
+                <div class="header-actions">
+                    <div class="time-display">
+                        <i class="far fa-clock"></i>
+                        <span id="current-time">--:--:--</span>
+                    </div>
+                    <button class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i>
+                        Atualizar
+                    </button>
+                </div>
+            </header>
+            
+            <!-- KPIs -->
+            <section class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-title">Disponibilidade</div>
+                        <i class="fas fa-signal kpi-icon"></i>
+                    </div>
+                    <div class="kpi-value" id="availability">99.87%</div>
+                    <div class="kpi-trend trend-up">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>+0.12% (24h)</span>
+                    </div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-title">Latência Média</div>
+                        <i class="fas fa-bolt kpi-icon"></i>
+                    </div>
+                    <div class="kpi-value" id="latency">24.3<span style="font-size: 1rem;">ms</span></div>
+                    <div class="kpi-trend trend-down">
+                        <i class="fas fa-arrow-down"></i>
+                        <span>-2.1ms (24h)</span>
+                    </div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-title">ONUs Online</div>
+                        <i class="fas fa-wifi kpi-icon"></i>
+                    </div>
+                    <div class="kpi-value" id="onus">1,247</div>
+                    <div class="kpi-trend">
+                        <i class="fas fa-minus"></i>
+                        <span>Estável (24h)</span>
+                    </div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-title">CPU Orange Pi</div>
+                        <i class="fas fa-microchip kpi-icon"></i>
+                    </div>
+                    <div class="kpi-value" id="cpu-usage">34%</div>
+                    <div class="kpi-trend">
+                        <div style="width: 100%; height: 6px; background: #334155; border-radius: 3px; margin-top: 0.5rem;">
+                            <div style="width: 34%; height: 100%; background: var(--success-color); border-radius: 3px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- ALERTAS -->
+            <section class="alerts-section">
+                <div class="section-header">
+                    <h2 class="section-title">Alertas Ativos</h2>
+                    <div class="badge badge-critical">3 Críticos</div>
+                </div>
+                
+                <div class="alerts-list">
+                    <div class="alert-item alert-critical">
+                        <i class="fas fa-exclamation-circle alert-icon"></i>
+                        <div class="alert-content">
+                            <div class="alert-title">Degradação Óptica Detectada</div>
+                            <div class="alert-description">OLT-01 • Porta 1/0/8 • Sinal caindo -1.2dB/dia</div>
+                        </div>
+                        <div class="alert-time">há 2 horas</div>
+                    </div>
+                    
+                    <div class="alert-item alert-warning">
+                        <i class="fas fa-exclamation-triangle alert-icon"></i>
+                        <div class="alert-content">
+                            <div class="alert-title">Alta Utilização de CPU</div>
+                            <div class="alert-description">Switch Core • CPU em 92% por 30min</div>
+                        </div>
+                        <div class="alert-time">há 5 horas</div>
+                    </div>
+                    
+                    <div class="alert-item alert-info">
+                        <i class="fas fa-info-circle alert-icon"></i>
+                        <div class="alert-content">
+                            <div class="alert-title">Link Próximo da Saturação</div>
+                            <div class="alert-description">Rádio Backhaul • 85% utilizado • Previsão: 3 dias</div>
+                        </div>
+                        <div class="alert-time">há 1 dia</div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- DISPOSITIVOS -->
+            <section>
+                <h2 class="section-title" style="margin-bottom: 1rem;">Dispositivos Monitorados</h2>
+                <div class="devices-grid">
+                    <div class="device-card">
+                        <div class="device-header">
+                            <div class="device-name">OLT Huawei MA5800</div>
+                            <div class="device-status status-online">
+                                <i class="fas fa-circle"></i>
+                                <span>Online</span>
+                            </div>
+                        </div>
+                        <div>IP: 10.0.1.10 • 24 Portas GPON</div>
+                        
+                        <div class="device-metrics">
+                            <div class="metric">
+                                <div class="metric-label">CPU</div>
+                                <div class="metric-value">42%</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Memória</div>
+                                <div class="metric-value">67%</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Temperatura</div>
+                                <div class="metric-value">48°C</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">ONUs Ativas</div>
+                                <div class="metric-value">312/320</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="device-card">
+                        <div class="device-header">
+                            <div class="device-name">MikroTik CCR2004</div>
+                            <div class="device-status status-online">
+                                <i class="fas fa-circle"></i>
+                                <span>Online</span>
+                            </div>
+                        </div>
+                        <div>IP: 10.0.1.1 • Core Router</div>
+                        
+                        <div class="device-metrics">
+                            <div class="metric">
+                                <div class="metric-label">Tráfego IN</div>
+                                <div class="metric-value">850 Mbps</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Tráfego OUT</div>
+                                <div class="metric-value">920 Mbps</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Pacotes/s</div>
+                                <div class="metric-value">42k</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Uptime</div>
+                                <div class="metric-value">45 dias</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- GRÁFICO -->
+            <section class="chart-container">
+                <div class="section-header">
+                    <h2 class="section-title">Tráfego de Rede (Últimas 24h)</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn" style="background: #334155; color: white; font-size: 0.875rem;">24h</button>
+                        <button class="btn" style="background: transparent; border: 1px solid #334155; color: #94a3b8; font-size: 0.875rem;">7d</button>
+                        <button class="btn" style="background: transparent; border: 1px solid #334155; color: #94a3b8; font-size: 0.875rem;">30d</button>
+                    </div>
+                </div>
+                <div class="chart-placeholder">
+                    <div style="text-align: center;">
+                        <i class="fas fa-chart-area" style="font-size: 3rem; margin-bottom: 1rem; display: block;"></i>
+                        <div>Gráfico interativo carregado via Chart.js</div>
+                        <div style="font-size: 0.875rem; margin-top: 0.5rem;">Integração com TimescaleDB para dados em tempo real</div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- FOOTER -->
+            <footer class="footer">
+                <div class="node-info">
+                    <i class="fas fa-microchip"></i>
+                    <span>SINAPSE Node • Orange Pi 3B • 192.168.1.100</span>
+                </div>
+                <div>
+                    <span id="data-update">Última atualização: --:--:--</span>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // FUNÇÕES PARA TEMPO E ATUALIZAÇÃO
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('pt-BR');
+            const dateString = now.toLocaleDateString('pt-BR');
+            
+            document.getElementById('current-time').textContent = timeString;
+            document.getElementById('data-update').textContent = 
+                `Última atualização: ${dateString} ${timeString}`;
+        }
+        
+        // ATUALIZAR KPIs DINAMICAMENTE (SIMULAÇÃO)
+        function updateKPIs() {
+            // Simulação de dados variáveis
+            const availability = (99.7 + Math.random() * 0.4).toFixed(2);
+            const latency = (20 + Math.random() * 10).toFixed(1);
+            const onus = 1240 + Math.floor(Math.random() * 20);
+            const cpu = 30 + Math.floor(Math.random() * 15);
+            
+            document.getElementById('availability').textContent = `${availability}%`;
+            document.getElementById('latency').textContent = `${latency}ms`;
+            document.getElementById('onus').textContent = onus.toLocaleString();
+            document.getElementById('cpu-usage').textContent = `${cpu}%`;
+            
+            // Atualizar barra de CPU
+            const cpuBar = document.querySelector('.kpi-card:nth-child(4) .kpi-trend div div');
+            if (cpuBar) {
+                cpuBar.style.width = `${cpu}%`;
+                cpuBar.style.backgroundColor = cpu > 70 ? 'var(--warning-color)' : 
+                                               cpu > 90 ? 'var(--danger-color)' : 
+                                               'var(--success-color)';
+            }
+        }
+        
+        // ATUALIZAR STATUS DOS DISPOSITIVOS
+        function updateDeviceStatus() {
+            const statusElements = document.querySelectorAll('.device-status');
+            statusElements.forEach(el => {
+                // 95% de chance de estar online (simulação)
+                if (Math.random() > 0.05) {
+                    el.innerHTML = '<i class="fas fa-circle"></i><span>Online</span>';
+                    el.className = 'device-status status-online';
+                } else {
+                    el.innerHTML = '<i class="fas fa-circle"></i><span>Offline</span>';
+                    el.className = 'device-status status-offline';
+                }
+            });
+        }
+        
+        // BOTÃO DE ATUALIZAÇÃO
+        document.querySelector('.btn-primary').addEventListener('click', function() {
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
+            
+            // Simular atualização
+            setTimeout(() => {
+                updateKPIs();
+                updateDeviceStatus();
+                updateTime();
+                this.innerHTML = '<i class="fas fa-sync-alt"></i> Atualizar';
+                
+                // Feedback visual
+                this.style.backgroundColor = 'var(--success-color)';
+                setTimeout(() => {
+                    this.style.backgroundColor = '';
+                }, 500);
+            }, 800);
+        });
+        
+        // NAVEGAÇÃO DA SIDEBAR
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('.nav-item').forEach(i => {
+                    i.classList.remove('active');
+                });
+                this.classList.add('active');
+                
+                // Aqui iria a lógica para carregar a página correspondente
+                console.log(`Navegando para: ${this.querySelector('span').textContent}`);
+            });
+        });
+        
+        // INICIALIZAÇÃO
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTime();
+            updateKPIs();
+            
+            // Atualizar tempo a cada segundo
+            setInterval(updateTime, 1000);
+            
+            // Atualizar KPIs a cada 30 segundos (simulação)
+            setInterval(updateKPIs, 30000);
+            
+            // Atualizar status dos dispositivos a cada 60 segundos
+            setInterval(updateDeviceStatus, 60000);
+            
+            // Modo offline detection (simulação)
+            window.addEventListener('offline', function() {
+                alert('⚠️ Conexão perdida. Modo offline ativado.');
+            });
+            
+            window.addEventListener('online', function() {
+                alert('✅ Conexão restaurada. Sincronizando dados...');
+            });
+        });
+    </script>
+</body>
+</html>
