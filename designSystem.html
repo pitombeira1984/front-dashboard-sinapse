@@ -11,6 +11,18 @@
             --print-primary: #000000;
             --print-secondary: #333333;
             --print-light: #666666;
+            
+            /* CORES DO SISTEMA SINAPSE */
+            --color-primary: #2563eb;
+            --color-secondary: #0ea5e9;
+            --color-dark: #1e293b;
+            --color-success: #10b981;
+            --color-warning: #f59e0b;
+            --color-danger: #dc2626;
+            --color-light-bg: #f8fafc;
+            --color-border-light: #e2e8f0;
+            --color-gray: #94a3b8;
+            --color-dark-bg: #0f172a;
         }
         
         @media print {
@@ -68,7 +80,7 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            background: #2563eb;
+            background: var(--color-primary);
             color: white;
             border: none;
             padding: 10px 20px;
@@ -86,51 +98,179 @@
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
             margin-top: 60px;
         }
+        
+        /* NOVOS ESTILOS COM CORES */
+        .color-box {
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .typography-sample {
+            background: var(--color-light-bg);
+            border-left: 4px solid var(--color-secondary);
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .font-scale > div {
+            padding: 10px;
+            border-bottom: 1px solid var(--color-border-light);
+        }
+        
+        .font-scale > div:nth-child(odd) {
+            background: var(--color-light-bg);
+            font-weight: bold;
+        }
+        
+        .component-card {
+            background: white;
+            border: 1px solid var(--color-border-light);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .component-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .token-list {
+            background: var(--color-light-bg);
+            border-left: 4px solid var(--color-primary);
+            padding: 15px;
+            border-radius: 0 8px 8px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .token {
+            background: white;
+            border: 1px solid var(--color-border-light);
+            color: var(--color-primary);
+            font-weight: bold;
+        }
+        
+        table {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        th {
+            background: var(--color-primary);
+            color: white;
+            font-weight: 600;
+        }
+        
+        td {
+            border-bottom: 1px solid var(--color-border-light);
+        }
+        
+        tr:nth-child(even) {
+            background: var(--color-light-bg);
+        }
+        
+        tr:hover {
+            background: rgba(37, 99, 235, 0.05);
+        }
+        
+        /* CORES ESPECÍFICAS PARA SEÇÕES */
+        .section-colors {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-left: 4px solid var(--color-primary);
+        }
+        
+        .section-typography {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border-left: 4px solid var(--color-success);
+        }
+        
+        .section-spacing {
+            background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+            border-left: 4px solid var(--color-warning);
+        }
+        
+        .section-components {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            border-left: 4px solid var(--color-danger);
+        }
+        
+        .section-accessibility {
+            background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+            border-left: 4px solid #8b5cf6;
+        }
+        
+        /* BADGES COLORIDOS */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 10pt;
+            font-weight: 600;
+            margin: 2px;
+        }
+        
+        .badge-primary { background: var(--color-primary); color: white; }
+        .badge-secondary { background: var(--color-secondary); color: white; }
+        .badge-success { background: var(--color-success); color: white; }
+        .badge-warning { background: var(--color-warning); color: black; }
+        .badge-danger { background: var(--color-danger); color: white; }
+        .badge-gray { background: var(--color-gray); color: white; }
     </style>
 </head>
 <body>
     <button class="print-btn no-print" onclick="window.print()">🖨️ Imprimir Guide</button>
     
     <div class="guide-container">
-        <!-- CAPA -->
-        <div style="text-align: center; margin-bottom: 3cm;">
-            <div style="font-size: 36pt; font-weight: bold; color: #2563eb; margin-bottom: 1cm;">SINAPSE</div>
-            <h1>Design System</h1>
-            <p style="font-size: 14pt; color: #666;">Guia completo de cores, tipografia e componentes</p>
-            <p style="color: #666;">Versão 1.0 • Janeiro 2026</p>
+        <!-- CAPA COM CORES -->
+        <div style="text-align: center; margin-bottom: 3cm; background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%); padding: 3cm 2cm; border-radius: 16px; color: white;">
+            <div style="font-size: 48pt; font-weight: bold; margin-bottom: 1cm; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">SINAPSE</div>
+            <h1 style="color: white; border-bottom: 2px solid rgba(255,255,255,0.3);">Design System</h1>
+            <p style="font-size: 14pt; color: rgba(255,255,255,0.9);">Guia completo de cores, tipografia e componentes</p>
+            <p style="color: rgba(255,255,255,0.7);">Versão 1.0 • Janeiro 2026</p>
         </div>
         
-        <!-- SUMÁRIO -->
-        <div>
-            <h2>📋 Sumário</h2>
+        <!-- SUMÁRIO COLORIDO -->
+        <div class="section-colors" style="padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <h2 style="color: var(--color-primary);">📋 Sumário</h2>
             <table>
                 <tr>
                     <td><strong>1. Sistema de Cores</strong></td>
                     <td>Paleta completa, uso semântico, acessibilidade</td>
+                    <td><span class="badge badge-primary">Colorido</span></td>
                 </tr>
                 <tr>
                     <td><strong>2. Tipografia</strong></td>
                     <td>Escala, hierarquia, pesos, line-height</td>
+                    <td><span class="badge badge-success">Atualizado</span></td>
                 </tr>
                 <tr>
                     <td><strong>3. Espaçamento</strong></td>
                     <td>Grid, padding, margin, scale</td>
+                    <td><span class="badge badge-warning">Revisado</span></td>
                 </tr>
                 <tr>
                     <td><strong>4. Componentes Base</strong></td>
                     <td>Botões, cards, inputs, tabelas</td>
+                    <td><span class="badge badge-danger">Importante</span></td>
                 </tr>
                 <tr>
                     <td><strong>5. Estados e Feedback</strong></td>
                     <td>Hover, focus, disabled, loading</td>
+                    <td><span class="badge badge-secondary">Interativo</span></td>
                 </tr>
                 <tr>
                     <td><strong>6. Acessibilidade</strong></td>
                     <td>Contraste, ARIA, navegação</td>
+                    <td><span class="badge badge-primary">Essencial</span></td>
                 </tr>
                 <tr>
                     <td><strong>7. Tokens CSS</strong></td>
                     <td>Variáveis reutilizáveis</td>
+                    <td><span class="badge badge-gray">Técnico</span></td>
                 </tr>
             </table>
         </div>
@@ -138,8 +278,8 @@
         <div class="page-break"></div>
         
         <!-- 1. SISTEMA DE CORES -->
-        <div>
-            <h2>🎨 1. Sistema de Cores</h2>
+        <div class="section-colors" style="padding: 20px; border-radius: 8px;">
+            <h2 style="color: var(--color-primary);">🎨 1. Sistema de Cores</h2>
             
             <h3>1.1. Paleta Principal</h3>
             <div class="color-grid">
@@ -245,7 +385,7 @@
         <div class="page-break"></div>
         
         <!-- CONTINUAÇÃO CORES -->
-        <div>
+        <div class="section-colors" style="padding: 20px; border-radius: 8px;">
             <h3>1.4. Uso por Componente</h3>
             <table>
                 <thead>
@@ -254,6 +394,7 @@
                         <th>Cor Primária</th>
                         <th>Cor Secundária</th>
                         <th>Estado Hover</th>
+                        <th>Exemplo</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -262,40 +403,45 @@
                         <td><code>#2563eb</code></td>
                         <td><code>#1d4ed8</code> (hover)</td>
                         <td>10% mais escuro</td>
+                        <td><div style="width: 20px; height: 20px; background: #2563eb; border-radius: 4px;"></div></td>
                     </tr>
                     <tr>
                         <td>Botão Secundário</td>
                         <td><code>#334155</code></td>
                         <td><code>#475569</code> (hover)</td>
                         <td>10% mais claro</td>
+                        <td><div style="width: 20px; height: 20px; background: #334155; border-radius: 4px;"></div></td>
                     </tr>
                     <tr>
                         <td>Card</td>
                         <td><code>#1e293b</code></td>
                         <td><code>#334155</code> (border)</td>
                         <td>--</td>
+                        <td><div style="width: 20px; height: 20px; background: #1e293b; border-radius: 4px;"></div></td>
                     </tr>
                     <tr>
                         <td>Sidebar</td>
                         <td><code>#1e293b</code></td>
                         <td><code>#0f172a</code> (bg)</td>
                         <td>--</td>
+                        <td><div style="width: 20px; height: 20px; background: #1e293b; border-radius: 4px;"></div></td>
                     </tr>
                     <tr>
                         <td>Link</td>
                         <td><code>#0ea5e9</code></td>
                         <td><code>#38bdf8</code> (hover)</td>
                         <td>20% mais claro</td>
+                        <td><div style="width: 20px; height: 20px; background: #0ea5e9; border-radius: 4px;"></div></td>
                     </tr>
                 </tbody>
             </table>
             
             <h3>1.5. Acessibilidade de Cor</h3>
             <div class="token-list">
-                <strong>Contraste Mínimo WCAG AA:</strong> 4.5:1 para texto normal<br>
-                <strong>Contraste WCAG AAA:</strong> 7:1 para texto pequeno<br>
-                <strong>Testado com:</strong> <span class="token">#2563eb</span> sobre <span class="token">#ffffff</span> = 6.2:1 ✓<br>
-                <strong>Alerta:</strong> <span class="token">#f59e0b</span> sobre <span class="token">#ffffff</span> = 3.1:1 ✗ (usar sobre escuro)
+                <strong>Contraste Mínimo WCAG AA:</strong> <span class="badge badge-success">4.5:1</span> para texto normal<br>
+                <strong>Contraste WCAG AAA:</strong> <span class="badge badge-success">7:1</span> para texto pequeno<br>
+                <strong>Testado com:</strong> <span class="token">#2563eb</span> sobre <span class="token">#ffffff</span> = <span class="badge badge-success">6.2:1 ✓</span><br>
+                <strong>Alerta:</strong> <span class="token">#f59e0b</span> sobre <span class="token">#ffffff</span> = <span class="badge badge-warning">3.1:1 ✗</span> (usar sobre escuro)
             </div>
             
             <h3>1.6. Cores para Grafismo</h3>
@@ -333,58 +479,58 @@
         <div class="page-break"></div>
         
         <!-- 2. TIPOGRAFIA -->
-        <div>
-            <h2>🔤 2. Sistema Tipográfico</h2>
+        <div class="section-typography" style="padding: 20px; border-radius: 8px;">
+            <h2 style="color: var(--color-success);">🔤 2. Sistema Tipográfico</h2>
             
             <h3>2.1. Font Family</h3>
             <div class="typography-sample">
-                <p style="font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 14pt;">
+                <p style="font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 14pt; color: var(--color-dark);">
                     <strong>Primária:</strong> 'Segoe UI', system-ui, -apple-system, sans-serif
                 </p>
-                <p style="font-family: 'Arial', sans-serif; font-size: 14pt;">
+                <p style="font-family: 'Arial', sans-serif; font-size: 14pt; color: var(--color-dark);">
                     <strong>Fallback:</strong> Arial, sans-serif (para print/PDF)
                 </p>
-                <p style="font-family: 'Courier New', monospace; font-size: 14pt;">
+                <p style="font-family: 'Courier New', monospace; font-size: 14pt; color: var(--color-dark);">
                     <strong>Monospace:</strong> 'Courier New', monospace (código)
                 </p>
             </div>
             
             <h3>2.2. Escala de Tipos</h3>
             <div class="font-scale">
-                <div style="font-size: 36pt; font-weight: bold;">H1</div>
+                <div style="font-size: 36pt; font-weight: bold; color: var(--color-primary);">H1</div>
                 <div>
                     <strong>36pt / 2.25rem</strong><br>
-                    <span style="color: #666;">Logo, títulos principais</span>
+                    <span style="color: var(--color-gray);">Logo, títulos principais</span>
                 </div>
                 
-                <div style="font-size: 24pt; font-weight: bold;">H2</div>
+                <div style="font-size: 24pt; font-weight: bold; color: var(--color-primary);">H2</div>
                 <div>
                     <strong>24pt / 1.5rem</strong><br>
-                    <span style="color: #666;">Títulos de seção</span>
+                    <span style="color: var(--color-gray);">Títulos de seção</span>
                 </div>
                 
-                <div style="font-size: 18pt; font-weight: 600;">H3</div>
+                <div style="font-size: 18pt; font-weight: 600; color: var(--color-primary);">H3</div>
                 <div>
                     <strong>18pt / 1.125rem</strong><br>
-                    <span style="color: #666;">Subtítulos</span>
+                    <span style="color: var(--color-gray);">Subtítulos</span>
                 </div>
                 
-                <div style="font-size: 14pt;">Body Large</div>
+                <div style="font-size: 14pt; color: var(--color-dark);">Body Large</div>
                 <div>
                     <strong>14pt / 0.875rem</strong><br>
-                    <span style="color: #666;">Texto corpo maior</span>
+                    <span style="color: var(--color-gray);">Texto corpo maior</span>
                 </div>
                 
-                <div style="font-size: 11pt;">Body</div>
+                <div style="font-size: 11pt; color: var(--color-dark);">Body</div>
                 <div>
                     <strong>11pt / 0.6875rem</strong><br>
-                    <span style="color: #666;">Texto padrão (print)</span>
+                    <span style="color: var(--color-gray);">Texto padrão (print)</span>
                 </div>
                 
-                <div style="font-size: 10pt;">Small</div>
+                <div style="font-size: 10pt; color: var(--color-dark);">Small</div>
                 <div>
                     <strong>10pt / 0.625rem</strong><br>
-                    <span style="color: #666;">Legendas, labels</span>
+                    <span style="color: var(--color-gray);">Legendas, labels</span>
                 </div>
             </div>
             
@@ -396,6 +542,7 @@
                         <th>Valor</th>
                         <th>Uso</th>
                         <th>Exemplo</th>
+                        <th>Cor</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -404,30 +551,35 @@
                         <td>300</td>
                         <td>Texto secundário</td>
                         <td style="font-weight: 300;">Status: Online</td>
+                        <td><div style="width: 20px; height: 20px; background: var(--color-gray); border-radius: 50%;"></div></td>
                     </tr>
                     <tr>
                         <td>Regular</td>
                         <td>400</td>
                         <td>Texto corpo</td>
                         <td style="font-weight: 400;">Monitoramento ativo</td>
+                        <td><div style="width: 20px; height: 20px; background: var(--color-dark); border-radius: 50%;"></div></td>
                     </tr>
                     <tr>
                         <td>Medium</td>
                         <td>500</td>
                         <td>Labels, botões</td>
                         <td style="font-weight: 500;">Adicionar Dispositivo</td>
+                        <td><div style="width: 20px; height: 20px; background: var(--color-primary); border-radius: 50%;"></div></td>
                     </tr>
                     <tr>
                         <td>Semibold</td>
                         <td>600</td>
                         <td>Títulos menores</td>
                         <td style="font-weight: 600;">Alertas Ativos</td>
+                        <td><div style="width: 20px; height: 20px; background: var(--color-warning); border-radius: 50%;"></div></td>
                     </tr>
                     <tr>
                         <td>Bold</td>
                         <td>700</td>
                         <td>Títulos principais</td>
                         <td style="font-weight: 700;">Dashboard</td>
+                        <td><div style="width: 20px; height: 20px; background: var(--color-danger); border-radius: 50%;"></div></td>
                     </tr>
                 </tbody>
             </table>
@@ -436,7 +588,7 @@
         <div class="page-break"></div>
         
         <!-- CONTINUAÇÃO TIPOGRAFIA -->
-        <div>
+        <div class="section-typography" style="padding: 20px; border-radius: 8px;">
             <h3>2.4. Line Height (Altura de Linha)</h3>
             <div class="token-list">
                 <strong>Títulos:</strong> <span class="token">line-height: 1.2</span><br>
@@ -452,60 +604,64 @@
                         <th>Elemento</th>
                         <th>Valor</th>
                         <th>Exemplo</th>
+                        <th>Visual</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>Labels/Uppercase</td>
                         <td><code>0.05em</code></td>
-                        <td style="letter-spacing: 0.05em; text-transform: uppercase;">DISPOSITIVOS</td>
+                        <td style="letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-dark);">DISPOSITIVOS</td>
+                        <td><div style="width: 60px; height: 4px; background: var(--color-secondary); border-radius: 2px;"></div></td>
                     </tr>
                     <tr>
                         <td>Títulos</td>
                         <td><code>0</code></td>
-                        <td>Dashboard Principal</td>
+                        <td style="color: var(--color-dark);">Dashboard Principal</td>
+                        <td><div style="width: 40px; height: 4px; background: var(--color-primary); border-radius: 2px;"></div></td>
                     </tr>
                     <tr>
                         <td>Texto Corpo</td>
                         <td><code>0</code></td>
-                        <td>Monitoramento em tempo real</td>
+                        <td style="color: var(--color-dark);">Monitoramento em tempo real</td>
+                        <td><div style="width: 20px; height: 4px; background: var(--color-gray); border-radius: 2px;"></div></td>
                     </tr>
                 </tbody>
             </table>
             
             <h3>2.6. Hierarquia de Texto por Tela</h3>
             <div class="component-card">
-                <h4>Dashboard</h4>
-                <p><strong>H1:</strong> Dashboard de Monitoramento (24pt)</p>
-                <p><strong>H2:</strong> Alertas Ativos (18pt)</p>
-                <p><strong>KPI Value:</strong> 99.87% (36pt, bold)</p>
-                <p><strong>KPI Label:</strong> Disponibilidade (10pt, uppercase)</p>
+                <h4 style="color: var(--color-primary);">Dashboard</h4>
+                <p><strong>H1:</strong> <span style="color: var(--color-primary); font-size: 24pt; font-weight: bold;">Dashboard de Monitoramento</span> (24pt)</p>
+                <p><strong>H2:</strong> <span style="color: var(--color-success); font-size: 18pt; font-weight: 600;">Alertas Ativos</span> (18pt)</p>
+                <p><strong>KPI Value:</strong> <span style="color: var(--color-dark); font-size: 36pt; font-weight: bold;">99.87%</span> (36pt, bold)</p>
+                <p><strong>KPI Label:</strong> <span style="color: var(--color-gray); font-size: 10pt; text-transform: uppercase;">Disponibilidade</span> (10pt, uppercase)</p>
             </div>
             
             <div class="component-card">
-                <h4>Tabelas</h4>
-                <p><strong>Header:</strong> Nome do Dispositivo (11pt, semibold)</p>
-                <p><strong>Cell:</strong> OLT Huawei MA5800 (11pt, regular)</p>
-                <p><strong>Subtext:</strong> ID: 001 (9pt, light)</p>
+                <h4 style="color: var(--color-primary);">Tabelas</h4>
+                <p><strong>Header:</strong> <span style="color: var(--color-dark); font-size: 11pt; font-weight: 600;">Nome do Dispositivo</span> (11pt, semibold)</p>
+                <p><strong>Cell:</strong> <span style="color: var(--color-dark); font-size: 11pt;">OLT Huawei MA5800</span> (11pt, regular)</p>
+                <p><strong>Subtext:</strong> <span style="color: var(--color-gray); font-size: 9pt; font-weight: 300;">ID: 001</span> (9pt, light)</p>
             </div>
         </div>
         
         <div class="page-break"></div>
         
         <!-- 3. ESPAÇAMENTO -->
-        <div>
-            <h2>📏 3. Sistema de Espaçamento</h2>
+        <div class="section-spacing" style="padding: 20px; border-radius: 8px;">
+            <h2 style="color: var(--color-warning);">📏 3. Sistema de Espaçamento</h2>
             
             <h3>3.1. Scale Base (8px)</h3>
             <div class="token-list">
-                <span class="token">--space-1: 0.125rem</span> /* 2px */<br>
-                <span class="token">--space-2: 0.25rem</span> /* 4px */<br>
-                <span class="token">--space-3: 0.5rem</span> /* 8px */<br>
-                <span class="token">--space-4: 1rem</span> /* 16px */<br>
-                <span class="token">--space-5: 1.5rem</span> /* 24px */<br>
-                <span class="token">--space-6: 2rem</span> /* 32px */<br>
-                <span class="token">--space-8: 3rem</span> /* 48px */<br>
-                <span class="token">--space-10: 4rem</span> /* 64px */
+                <span class="token" style="background: #f0f9ff; color: var(--color-primary);">--space-1: 0.125rem</span> /* 2px */<br>
+                <span class="token" style="background: #e0f2fe; color: var(--color-secondary);">--space-2: 0.25rem</span> /* 4px */<br>
+                <span class="token" style="background: #dcfce7; color: var(--color-success);">--space-3: 0.5rem</span> /* 8px */<br>
+                <span class="token" style="background: #fef3c7; color: var(--color-warning);">--space-4: 1rem</span> /* 16px */<br>
+                <span class="token" style="background: #fee2e2; color: var(--color-danger);">--space-5: 1.5rem</span> /* 24px */<br>
+                <span class="token" style="background: #ede9fe; color: #8b5cf6;">--space-6: 2rem</span> /* 32px */<br>
+                <span class="token" style="background: #fce7f3; color: #ec4899;">--space-8: 3rem</span> /* 48px */<br>
+                <span class="token" style="background: #f1f5f9; color: var(--color-gray);">--space-10: 4rem</span> /* 64px */
             </div>
             
             <h3>3.2. Uso por Componente</h3>
@@ -516,6 +672,7 @@
                         <th>Padding</th>
                         <th>Margin</th>
                         <th>Gap</th>
+                        <th>Visual</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -524,74 +681,82 @@
                         <td><code>0.5rem 1rem</code></td>
                         <td><code>0</code></td>
                         <td><code>0.5rem</code> (ícone/texto)</td>
+                        <td><div style="display: flex; gap: 4px;">
+                            <div style="width: 8px; height: 8px; background: var(--color-primary); border-radius: 2px;"></div>
+                            <div style="width: 16px; height: 8px; background: var(--color-primary); border-radius: 2px;"></div>
+                        </div></td>
                     </tr>
                     <tr>
                         <td>Card</td>
                         <td><code>1.5rem</code></td>
                         <td><code>0 0 1rem 0</code></td>
                         <td><code>1rem</code> (interno)</td>
+                        <td><div style="width: 24px; height: 8px; background: var(--color-success); border-radius: 2px;"></div></td>
                     </tr>
                     <tr>
                         <td>KPI Card</td>
                         <td><code>1.5rem</code></td>
                         <td><code>0</code></td>
                         <td><code>1rem</code> (entre elementos)</td>
+                        <td><div style="width: 24px; height: 8px; background: var(--color-warning); border-radius: 2px;"></div></td>
                     </tr>
                     <tr>
                         <td>Sidebar Item</td>
                         <td><code>0.75rem 1rem</code></td>
                         <td><code>0 0 0.5rem 0</code></td>
                         <td><code>0.75rem</code> (ícone/texto)</td>
+                        <td><div style="width: 12px; height: 8px; background: var(--color-secondary); border-radius: 2px;"></div></td>
                     </tr>
                     <tr>
                         <td>Form Input</td>
                         <td><code>0.75rem 1rem</code></td>
                         <td><code>0 0 1.5rem 0</code></td>
                         <td><code>0.5rem</code> (label/input)</td>
+                        <td><div style="width: 8px; height: 8px; background: var(--color-danger); border-radius: 2px;"></div></td>
                     </tr>
                 </tbody>
             </table>
             
             <h3>3.3. Border Radius</h3>
             <div class="token-list">
-                <span class="token">--radius-sm: 4px</span> /* Inputs, badges */<br>
-                <span class="token">--radius-md: 8px</span> /* Cards, botões */<br>
-                <span class="token">--radius-lg: 12px</span> /* Modais, containers */<br>
-                <span class="token">--radius-full: 9999px</span> /* Badges redondos */
+                <span class="token" style="background: #f0f9ff; color: var(--color-primary);">--radius-sm: 4px</span> /* Inputs, badges */<br>
+                <span class="token" style="background: #e0f2fe; color: var(--color-secondary);">--radius-md: 8px</span> /* Cards, botões */<br>
+                <span class="token" style="background: #dcfce7; color: var(--color-success);">--radius-lg: 12px</span> /* Modais, containers */<br>
+                <span class="token" style="background: #fef3c7; color: var(--color-warning);">--radius-full: 9999px</span> /* Badges redondos */
             </div>
         </div>
         
         <div class="page-break"></div>
         
         <!-- 4. COMPONENTES BASE -->
-        <div>
-            <h2>🧩 4. Componentes Base</h2>
+        <div class="section-components" style="padding: 20px; border-radius: 8px;">
+            <h2 style="color: var(--color-danger);">🧩 4. Componentes Base</h2>
             
             <h3>4.1. Botões</h3>
             <div class="component-grid">
                 <div class="component-card">
-                    <div style="background: #2563eb; color: white; padding: 0.5rem 1rem; border-radius: 8px; display: inline-block;">
+                    <div style="background: var(--color-primary); color: white; padding: 0.5rem 1rem; border-radius: 8px; display: inline-block; font-weight: 500;">
                         Botão Primário
                     </div>
                     <p><code>.btn-primary</code></p>
                 </div>
                 
                 <div class="component-card">
-                    <div style="background: #334155; color: white; padding: 0.5rem 1rem; border-radius: 8px; display: inline-block;">
+                    <div style="background: var(--color-dark); color: white; padding: 0.5rem 1rem; border-radius: 8px; display: inline-block; font-weight: 500;">
                         Botão Secundário
                     </div>
                     <p><code>.btn-secondary</code></p>
                 </div>
                 
                 <div class="component-card">
-                    <div style="background: #10b981; color: white; padding: 0.5rem 1rem; border-radius: 8px; display: inline-block;">
+                    <div style="background: var(--color-success); color: white; padding: 0.5rem 1rem; border-radius: 8px; display: inline-block; font-weight: 500;">
                         Sucesso
                     </div>
                     <p><code>.btn-success</code></p>
                 </div>
                 
                 <div class="component-card">
-                    <div style="background: #dc2626; color: white; padding: 0.5rem 1rem; border-radius: 8px; display: inline-block;">
+                    <div style="background: var(--color-danger); color: white; padding: 0.5rem 1rem; border-radius: 8px; display: inline-block; font-weight: 500;">
                         Perigo
                     </div>
                     <p><code>.btn-danger</code></p>
@@ -600,12 +765,12 @@
             
             <h3>4.2. Cards</h3>
             <div class="component-card">
-                <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.5rem;">
+                <div style="background: var(--color-dark); border: 1px solid var(--color-border-light); border-radius: 8px; padding: 1.5rem; color: white;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
                         <div style="font-weight: 600;">Título do Card</div>
-                        <div style="color: #0ea5e9;">↗</div>
+                        <div style="color: var(--color-secondary); font-size: 1.2em;">↗</div>
                     </div>
-                    <div style="color: #94a3b8; font-size: 0.875rem;">
+                    <div style="color: var(--color-gray); font-size: 0.875rem;">
                         Descrição ou conteúdo do card. Pode conter métricas, listas ou ações.
                     </div>
                 </div>
@@ -616,8 +781,8 @@
             <div class="component-grid">
                 <div class="component-card">
                     <div style="margin-bottom: 1rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Label</label>
-                        <input type="text" style="width: 100%; padding: 0.75rem 1rem; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: white;" placeholder="Placeholder">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-dark);">Label</label>
+                        <input type="text" style="width: 100%; padding: 0.75rem 1rem; background: white; border: 1px solid var(--color-border-light); border-radius: 8px; color: var(--color-dark);" placeholder="Placeholder">
                     </div>
                     <p><code>.form-control</code></p>
                 </div>
@@ -625,10 +790,10 @@
                 <div class="component-card">
                     <label style="display: flex; align-items: center; gap: 1rem;">
                         <div style="position: relative; width: 60px; height: 30px;">
-                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #334155; border-radius: 34px;"></div>
+                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--color-gray); border-radius: 34px;"></div>
                             <div style="position: absolute; height: 22px; width: 22px; left: 4px; bottom: 4px; background: white; border-radius: 50%;"></div>
                         </div>
-                        <span>Toggle Switch</span>
+                        <span style="color: var(--color-dark);">Toggle Switch</span>
                     </label>
                     <p><code>.toggle-switch</code></p>
                 </div>
@@ -649,6 +814,7 @@
                         <th>Cor</th>
                         <th>Opacidade</th>
                         <th>Cursor</th>
+                        <th>Exemplo</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -657,30 +823,35 @@
                         <td>100%</td>
                         <td>1</td>
                         <td><code>default</code></td>
+                        <td><div style="width: 20px; height: 20px; background: var(--color-primary); border-radius: 4px;"></div></td>
                     </tr>
                     <tr>
                         <td>Hover</td>
                         <td>10% mais escuro/claro</td>
                         <td>1</td>
                         <td><code>pointer</code></td>
+                        <td><div style="width: 20px; height: 20px; background: #1d4ed8; border-radius: 4px;"></div></td>
                     </tr>
                     <tr>
                         <td>Active</td>
                         <td>20% mais escuro</td>
                         <td>0.9</td>
                         <td><code>pointer</code></td>
+                        <td><div style="width: 20px; height: 20px; background: #1e40af; border-radius: 4px; opacity: 0.9;"></div></td>
                     </tr>
                     <tr>
                         <td>Focus</td>
                         <td>+ <code>outline: 2px solid #0ea5e9</code></td>
                         <td>1</td>
                         <td><code>pointer</code></td>
+                        <td><div style="width: 20px; height: 20px; background: var(--color-primary); border: 2px solid var(--color-secondary); border-radius: 4px;"></div></td>
                     </tr>
                     <tr>
                         <td>Disabled</td>
                         <td>50% mais claro</td>
                         <td>0.5</td>
                         <td><code>not-allowed</code></td>
+                        <td><div style="width: 20px; height: 20px; background: #93c5fd; border-radius: 4px; opacity: 0.5;"></div></td>
                     </tr>
                 </tbody>
             </table>
@@ -688,7 +859,7 @@
             <h3>5.2. Estados de Carregamento</h3>
             <div class="component-grid">
                 <div class="component-card">
-                    <div style="background: #2563eb; color: white; padding: 0.5rem 1rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <div style="background: var(--color-primary); color: white; padding: 0.5rem 1rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.5rem;">
                         <div style="width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                         Carregando...
                     </div>
@@ -696,12 +867,12 @@
                 </div>
                 
                 <div class="component-card">
-                    <div style="background: #1e293b; padding: 1.5rem; border-radius: 8px; border: 1px solid #334155;">
+                    <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid var(--color-border-light);">
                         <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-                            <div style="width: 40px; height: 40px; background: #334155; border-radius: 8px; animation: pulse 1.5s infinite;"></div>
+                            <div style="width: 40px; height: 40px; background: var(--color-border-light); border-radius: 8px; animation: pulse 1.5s infinite;"></div>
                             <div style="flex: 1;">
-                                <div style="height: 12px; background: #334155; border-radius: 4px; margin-bottom: 8px; animation: pulse 1.5s infinite; animation-delay: 0.2s;"></div>
-                                <div style="height: 8px; background: #334155; border-radius: 4px; width: 70%; animation: pulse 1.5s infinite; animation-delay: 0.4s;"></div>
+                                <div style="height: 12px; background: var(--color-border-light); border-radius: 4px; margin-bottom: 8px; animation: pulse 1.5s infinite; animation-delay: 0.2s;"></div>
+                                <div style="height: 8px; background: var(--color-border-light); border-radius: 4px; width: 70%; animation: pulse 1.5s infinite; animation-delay: 0.4s;"></div>
                             </div>
                         </div>
                     </div>
@@ -723,15 +894,15 @@
         <div class="page-break"></div>
         
         <!-- 6. ACESSIBILIDADE -->
-        <div>
-            <h2>♿ 6. Acessibilidade</h2>
+        <div class="section-accessibility" style="padding: 20px; border-radius: 8px;">
+            <h2 style="color: #8b5cf6;">♿ 6. Acessibilidade</h2>
             
             <h3>6.1. Contraste Mínimo</h3>
             <div class="token-list">
-                <strong>Texto Normal:</strong> Contraste ≥ 4.5:1<br>
-                <strong>Texto Grande (18pt+):</strong> Contraste ≥ 3:1<br>
-                <strong>Elementos UI:</strong> Contraste ≥ 3:1<br>
-                <strong>Testar com:</strong> <a href="https://webaim.org/resources/contrastchecker/" target="_blank">WebAIM Contrast Checker</a>
+                <strong>Texto Normal:</strong> Contraste <span class="badge badge-success">≥ 4.5:1</span><br>
+                <strong>Texto Grande (18pt+):</strong> Contraste <span class="badge badge-success">≥ 3:1</span><br>
+                <strong>Elementos UI:</strong> Contraste <span class="badge badge-warning">≥ 3:1</span><br>
+                <strong>Testar com:</strong> <a href="https://webaim.org/resources/contrastchecker/" target="_blank" style="color: var(--color-secondary); text-decoration: none; font-weight: bold;">WebAIM Contrast Checker ↗</a>
             </div>
             
             <h3>6.2. Navegação por Teclado</h3>
@@ -741,6 +912,7 @@
                         <th>Tecla</th>
                         <th>Ação</th>
                         <th>Implementação</th>
+                        <th>Ícone</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -748,25 +920,55 @@
                         <td><code>Tab</code></td>
                         <td>Navegar entre elementos focáveis</td>
                         <td><code>tabindex="0"</code></td>
+                        <td style="color: var(--color-primary); font-size: 1.2em;">⇥</td>
                     </tr>
                     <tr>
                         <td><code>Enter/Space</code></td>
                         <td>Ativar elemento</td>
                         <td><code>keydown event</code></td>
+                        <td style="color: var(--color-success); font-size: 1.2em;">↵</td>
                     </tr>
                     <tr>
                         <td><code>Esc</code></td>
                         <td>Fechar modais</td>
                         <td><code>Escape key listener</code></td>
+                        <td style="color: var(--color-warning); font-size: 1.2em;">⎋</td>
                     </tr>
                     <tr>
                         <td><code>Arrow Keys</code></td>
                         <td>Navegar em menus</td>
                         <td><code>focus management</code></td>
+                        <td style="color: var(--color-secondary); font-size: 1.2em;">↑↓←→</td>
                     </tr>
                 </tbody>
             </table>
             
             <h3>6.3. ARIA Labels</h3>
             <div class="token-list">
-                <span class="token">aria-label="Menu principal"</span><br>
+                <span class="token" style="background: #f0f9ff; color: var(--color-primary);">aria-label="Menu principal"</span><br>
+                <span class="token" style="background: #dcfce7; color: var(--color-success);">aria-describedby="help-text"</span><br>
+                <span class="token" style="background: #fef3c7; color: var(--color-warning);">aria-live="polite"</span><br>
+                <span class="token" style="background: #fee2e2; color: var(--color-danger);">aria-required="true"</span>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Design System SINAPSE • Versão 1.0 • Documento impresso em <span id="current-date"></span></p>
+            <p>© 2026 SINAPSE Design Team • Uso interno e restrito</p>
+        </footer>
+    </div>
+    
+    <script>
+        // Data atual no footer
+        document.getElementById('current-date').textContent = new Date().toLocaleDateString('pt-BR');
+        
+        // Efeito de impressão melhorado
+        window.addEventListener('beforeprint', function() {
+            document.querySelectorAll('.component-card').forEach(card => {
+                card.style.boxShadow = 'none';
+                card.style.transform = 'none';
+            });
+        });
+    </script>
+</body>
+</html>
