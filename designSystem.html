@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design System - SINAPSE</title>
+    <style>
+        /* ESTILOS DO GUIDE */
+        :root {
+            /* CORES PRIMÁRIAS - Para impressão */
+            --print-primary: #000000;
+            --print-secondary: #333333;
+            --print-light: #666666;
+        }
+        
+        @media print {
+            @page {
+                size: A4;
+                margin: 1.5cm;
+            }
+            
+            body {
+                font-family: 'Arial', sans-serif;
+                color: var(--print-primary);
+                background: white;
+                font-size: 11pt;
+                line-height: 1.4;
+            }
+            
+            .no-print { display: none; }
+            .page-break { page-break-after: always; }
+            
+            h1 { font-size: 24pt; border-bottom: 2px solid #000; padding-bottom: 10px; }
+            h2 { font-size: 18pt; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+            h3 { font-size: 14pt; margin-top: 1.5em; }
+            
+            .color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+            .color-card { border: 1px solid #ddd; border-radius: 4px; padding: 15px; }
+            .color-box { width: 100%; height: 60px; border: 1px solid #ccc; margin-bottom: 10px; }
+            
+            .typography-sample { border: 1px solid #ddd; padding: 15px; margin: 15px 0; }
+            .font-scale { display: grid; grid-template-columns: 100px 1fr; gap: 10px; align-items: center; }
+            
+            .component-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+            .component-card { border: 1px solid #ddd; padding: 15px; border-radius: 4px; }
+            
+            table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+            th { background: #000; color: white; padding: 8px; border: 1px solid #000; }
+            td { padding: 8px; border: 1px solid #ddd; }
+            
+            .token-list { font-family: monospace; background: #f5f5f5; padding: 10px; border-radius: 4px; }
+            .token { display: inline-block; background: #eee; padding: 2px 6px; border-radius: 3px; margin: 2px; font-size: 10pt; }
+            
+            footer { margin-top: 2cm; text-align: center; font-size: 9pt; color: #666; border-top: 1px solid #ddd; padding-top: 10px; }
+        }
+        
+        /* ESTILOS PARA VISUALIZAÇÃO WEB */
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: #1e293b;
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .print-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        
+        .print-btn:hover { background: #1d4ed8; }
+        
+        .guide-container {
+            background: white;
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            margin-top: 60px;
+        }
+    </style>
+</head>
+<body>
+    <button class="print-btn no-print" onclick="window.print()">🖨️ Imprimir Guide</button>
+    
+    <div class="guide-container">
+        <!-- CAPA -->
+        <div style="text-align: center; margin-bottom: 3cm;">
+            <div style="font-size: 36pt; font-weight: bold; color: #2563eb; margin-bottom: 1cm;">SINAPSE</div>
+            <h1>Design System</h1>
+            <p style="font-size: 14pt; color: #666;">Guia completo de cores, tipografia e componentes</p>
+            <p style="color: #666;">Versão 1.0 • Janeiro 2026</p>
+        </div>
+        
+        <!-- SUMÁRIO -->
+        <div>
+            <h2>📋 Sumário</h2>
+            <table>
+                <tr>
+                    <td><strong>1. Sistema de Cores</strong></td>
+                    <td>Paleta completa, uso semântico, acessibilidade</td>
+                </tr>
+                <tr>
+                    <td><strong>2. Tipografia</strong></td>
+                    <td>Escala, hierarquia, pesos, line-height</td>
+                </tr>
+                <tr>
+                    <td><strong>3. Espaçamento</strong></td>
+                    <td>Grid, padding, margin, scale</td>
+                </tr>
+                <tr>
+                    <td><strong>4. Componentes Base</strong></td>
+                    <td>Botões, cards, inputs, tabelas</td>
+                </tr>
+                <tr>
+                    <td><strong>5. Estados e Feedback</strong></td>
+                    <td>Hover, focus, disabled, loading</td>
+                </tr>
+                <tr>
+                    <td><strong>6. Acessibilidade</strong></td>
+                    <td>Contraste, ARIA, navegação</td>
+                </tr>
+                <tr>
+                    <td><strong>7. Tokens CSS</strong></td>
+                    <td>Variáveis reutilizáveis</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="page-break"></div>
+        
+        <!-- 1. SISTEMA DE CORES -->
+        <div>
+            <h2>🎨 1. Sistema de Cores</h2>
+            
+            <h3>1.1. Paleta Principal</h3>
+            <div class="color-grid">
+                <!-- CORES PRIMÁRIAS -->
+                <div class="color-card">
+                    <div class="color-box" style="background: #2563eb;"></div>
+                    <strong>Primary Blue</strong><br>
+                    <code>#2563eb</code><br>
+                    RGB: 37, 99, 235<br>
+                    Uso: Ações principais, botões
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-box" style="background: #0ea5e9;"></div>
+                    <strong>Secondary Cyan</strong><br>
+                    <code>#0ea5e9</code><br>
+                    RGB: 14, 165, 233<br>
+                    Uso: Ações secundárias, links
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-box" style="background: #1e293b;"></div>
+                    <strong>Dark Slate</strong><br>
+                    <code>#1e293b</code><br>
+                    RGB: 30, 41, 59<br>
+                    Uso: Fundos, sidebars
+                </div>
+            </div>
+            
+            <h3>1.2. Cores Semânticas (Status)</h3>
+            <div class="color-grid">
+                <div class="color-card">
+                    <div class="color-box" style="background: #10b981;"></div>
+                    <strong>Success Green</strong><br>
+                    <code>#10b981</code><br>
+                    Contraste: 4.6:1 ✓<br>
+                    Uso: Status online, sucesso
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-box" style="background: #f59e0b;"></div>
+                    <strong>Warning Amber</strong><br>
+                    <code>#f59e0b</code><br>
+                    Contraste: 3.1:1 ⚠️<br>
+                    Uso: Alertas médios, atenção
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-box" style="background: #dc2626;"></div>
+                    <strong>Danger Red</strong><br>
+                    <code>#dc2626</code><br>
+                    Contraste: 4.5:1 ✓<br>
+                    Uso: Erros, críticos, offline
+                </div>
+            </div>
+            
+            <h3>1.3. Escala de Cinza</h3>
+            <div class="color-grid">
+                <div class="color-card">
+                    <div class="color-box" style="background: #f8fafc;"></div>
+                    <strong>Light 50</strong><br>
+                    <code>#f8fafc</code><br>
+                    Uso: Fundo claro
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-box" style="background: #e2e8f0;"></div>
+                    <strong>Light 200</strong><br>
+                    <code>#e2e8f0</code><br>
+                    Uso: Bordas claras
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-box" style="background: #94a3b8;"></div>
+                    <strong>Gray 400</strong><br>
+                    <code>#94a3b8</code><br>
+                    Uso: Texto secundário
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-box" style="background: #64748b;"></div>
+                    <strong>Gray 500</strong><br>
+                    <code>#64748b</code><br>
+                    Uso: Texto terciário
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-box" style="background: #334155;"></div>
+                    <strong>Dark 700</strong><br>
+                    <code>#334155</code><br>
+                    Uso: Bordas escuras
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-box" style="background: #0f172a;"></div>
+                    <strong>Dark 950</strong><br>
+                    <code>#0f172a</code><br>
+                    Uso: Fundo principal
+                </div>
+            </div>
+        </div>
+        
+        <div class="page-break"></div>
+        
+        <!-- CONTINUAÇÃO CORES -->
+        <div>
+            <h3>1.4. Uso por Componente</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Componente</th>
+                        <th>Cor Primária</th>
+                        <th>Cor Secundária</th>
+                        <th>Estado Hover</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Botão Primário</td>
+                        <td><code>#2563eb</code></td>
+                        <td><code>#1d4ed8</code> (hover)</td>
+                        <td>10% mais escuro</td>
+                    </tr>
+                    <tr>
+                        <td>Botão Secundário</td>
+                        <td><code>#334155</code></td>
+                        <td><code>#475569</code> (hover)</td>
+                        <td>10% mais claro</td>
+                    </tr>
+                    <tr>
+                        <td>Card</td>
+                        <td><code>#1e293b</code></td>
+                        <td><code>#334155</code> (border)</td>
+                        <td>--</td>
+                    </tr>
+                    <tr>
+                        <td>Sidebar</td>
+                        <td><code>#1e293b</code></td>
+                        <td><code>#0f172a</code> (bg)</td>
+                        <td>--</td>
+                    </tr>
+                    <tr>
+                        <td>Link</td>
+                        <td><code>#0ea5e9</code></td>
+                        <td><code>#38bdf8</code> (hover)</td>
+                        <td>20% mais claro</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>1.5. Acessibilidade de Cor</h3>
+            <div class="token-list">
+                <strong>Contraste Mínimo WCAG AA:</strong> 4.5:1 para texto normal<br>
+                <strong>Contraste WCAG AAA:</strong> 7:1 para texto pequeno<br>
+                <strong>Testado com:</strong> <span class="token">#2563eb</span> sobre <span class="token">#ffffff</span> = 6.2:1 ✓<br>
+                <strong>Alerta:</strong> <span class="token">#f59e0b</span> sobre <span class="token">#ffffff</span> = 3.1:1 ✗ (usar sobre escuro)
+            </div>
+            
+            <h3>1.6. Cores para Grafismo</h3>
+            <div class="color-grid">
+                <div class="color-card">
+                    <div class="color-box" style="background: #8b5cf6;"></div>
+                    <strong>Chart Purple</strong><br>
+                    <code>#8b5cf6</code><br>
+                    Uso: Série A em gráficos
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-box" style="background: #10b981;"></div>
+                    <strong>Chart Green</strong><br>
+                    <code>#10b981</code><br>
+                    Uso: Série B em gráficos
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-box" style="background: #f97316;"></div>
+                    <strong>Chart Orange</strong><br>
+                    <code>#f97316</code><br>
+                    Uso: Série C em gráficos
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-box" style="background: #ec4899;"></div>
+                    <strong>Chart Pink</strong><br>
+                    <code>#ec4899</code><br>
+                    Uso: Série D em gráficos
+                </div>
+            </div>
+        </div>
+        
+        <div class="page-break"></div>
+        
+        <!-- 2. TIPOGRAFIA -->
+        <div>
+            <h2>🔤 2. Sistema Tipográfico</h2>
+            
+            <h3>2.1. Font Family</h3>
+            <div class="typography-sample">
+                <p style="font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 14pt;">
+                    <strong>Primária:</strong> 'Segoe UI', system-ui, -apple-system, sans-serif
+                </p>
+                <p style="font-family: 'Arial', sans-serif; font-size: 14pt;">
+                    <strong>Fallback:</strong> Arial, sans-serif (para print/PDF)
+                </p>
+                <p style="font-family: 'Courier New', monospace; font-size: 14pt;">
+                    <strong>Monospace:</strong> 'Courier New', monospace (código)
+                </p>
+            </div>
+            
+            <h3>2.2. Escala de Tipos</h3>
+            <div class="font-scale">
+                <div style="font-size: 36pt; font-weight: bold;">H1</div>
+                <div>
+                    <strong>36pt / 2.25rem</strong><br>
+                    <span style="color: #666;">Logo, títulos principais</span>
+                </div>
+                
+                <div style="font-size: 24pt; font-weight: bold;">H2</div>
+                <div>
+                    <strong>24pt / 1.5rem</strong><br>
+                    <span style="color: #666;">Títulos de seção</span>
+                </div>
+                
+                <div style="font-size: 18pt; font-weight: 600;">H3</div>
+                <div>
+                    <strong>18pt / 1.125rem</strong><br>
+                    <span style="color: #666;">Subtítulos</span>
+                </div>
+                
+                <div style="font-size: 14pt;">Body Large</div>
+                <div>
+                    <strong>14pt / 0.875rem</strong><br>
+                    <span style="color: #666;">Texto corpo maior</span>
+                </div>
+                
+                <div style="font-size: 11pt;">Body</div>
+                <div>
+                    <strong>11pt / 0.6875rem</strong><br>
+                    <span style="color: #666;">Texto padrão (print)</span>
+                </div>
+                
+                <div style="font-size: 10pt;">Small</div>
+                <div>
+                    <strong>10pt / 0.625rem</strong><br>
+                    <span style="color: #666;">Legendas, labels</span>
+                </div>
+            </div>
+            
+            <h3>2.3. Pesos de Fonte</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Peso</th>
+                        <th>Valor</th>
+                        <th>Uso</th>
+                        <th>Exemplo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Light</td>
+                        <td>300</td>
+                        <td>Texto secundário</td>
+                        <td style="font-weight: 300;">Status: Online</td>
+                    </tr>
+                    <tr>
+                        <td>Regular</td>
+                        <td>400</td>
+                        <td>Texto corpo</td>
+                        <td style="font-weight: 400;">Monitoramento ativo</td>
+                    </tr>
+                    <tr>
+                        <td>Medium</td>
+                        <td>500</td>
+                        <td>Labels, botões</td>
+                        <td style="font-weight: 500;">Adicionar Dispositivo</td>
+                    </tr>
+                    <tr>
+                        <td>Semibold</td>
+                        <td>600</td>
+                        <td>Títulos menores</td>
+                        <td style="font-weight: 600;">Alertas Ativos</td>
+                    </tr>
+                    <tr>
+                        <td>Bold</td>
+                        <td>700</td>
+                        <td>Títulos principais</td>
+                        <td style="font-weight: 700;">Dashboard</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="page-break"></div>
+        
+        <!-- CONTINUAÇÃO TIPOGRAFIA -->
+        <div>
+            <h3>2.4. Line Height (Altura de Linha)</h3>
+            <div class="token-list">
+                <strong>Títulos:</strong> <span class="token">line-height: 1.2</span><br>
+                <strong>Texto Corpo:</strong> <span class="token">line-height: 1.5</span><br>
+                <strong>Texto Densos:</strong> <span class="token">line-height: 1.4</span><br>
+                <strong>Labels:</strong> <span class="token">line-height: 1</span>
+            </div>
+            
+            <h3>2.5. Espaçamento de Letra (Letter Spacing)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Elemento</th>
+                        <th>Valor</th>
+                        <th>Exemplo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Labels/Uppercase</td>
+                        <td><code>0.05em</code></td>
+                        <td style="letter-spacing: 0.05em; text-transform: uppercase;">DISPOSITIVOS</td>
+                    </tr>
+                    <tr>
+                        <td>Títulos</td>
+                        <td><code>0</code></td>
+                        <td>Dashboard Principal</td>
+                    </tr>
+                    <tr>
+                        <td>Texto Corpo</td>
+                        <td><code>0</code></td>
+                        <td>Monitoramento em tempo real</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>2.6. Hierarquia de Texto por Tela</h3>
+            <div class="component-card">
+                <h4>Dashboard</h4>
+                <p><strong>H1:</strong> Dashboard de Monitoramento (24pt)</p>
+                <p><strong>H2:</strong> Alertas Ativos (18pt)</p>
+                <p><strong>KPI Value:</strong> 99.87% (36pt, bold)</p>
+                <p><strong>KPI Label:</strong> Disponibilidade (10pt, uppercase)</p>
+            </div>
+            
+            <div class="component-card">
+                <h4>Tabelas</h4>
+                <p><strong>Header:</strong> Nome do Dispositivo (11pt, semibold)</p>
+                <p><strong>Cell:</strong> OLT Huawei MA5800 (11pt, regular)</p>
+                <p><strong>Subtext:</strong> ID: 001 (9pt, light)</p>
+            </div>
+        </div>
+        
+        <div class="page-break"></div>
+        
+        <!-- 3. ESPAÇAMENTO -->
+        <div>
+            <h2>📏 3. Sistema de Espaçamento</h2>
+            
+            <h3>3.1. Scale Base (8px)</h3>
+            <div class="token-list">
+                <span class="token">--space-1: 0.125rem</span> /* 2px */<br>
+                <span class="token">--space-2: 0.25rem</span> /* 4px */<br>
+                <span class="token">--space-3: 0.5rem</span> /* 8px */<br>
+                <span class="token">--space-4: 1rem</span> /* 16px */<br>
+                <span class="token">--space-5: 1.5rem</span> /* 24px */<br>
+                <span class="token">--space-6: 2rem</span> /* 32px */<br>
+                <span class="token">--space-8: 3rem</span> /* 48px */<br>
+                <span class="token">--space-10: 4rem</span> /* 64px */
+            </div>
+            
+            <h3>3.2. Uso por Componente</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Componente</th>
+                        <th>Padding</th>
+                        <th>Margin</th>
+                        <th>Gap</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Botão</td>
+                        <td><code>0.5rem 1rem</code></td>
+                        <td><code>0</code></td>
+                        <td><code>0.5rem</code> (ícone/texto)</td>
+                    </tr>
+                    <tr>
+                        <td>Card</td>
+                        <td><code>1.5rem</code></td>
+                        <td><code>0 0 1rem 0</code></td>
+                        <td><code>1rem</code> (interno)</td>
+                    </tr>
+                    <tr>
+                        <td>KPI Card</td>
+                        <td><code>1.5rem</code></td>
+                        <td><code>0</code></td>
+                        <td><code>1rem</code> (entre elementos)</td>
+                    </tr>
+                    <tr>
+                        <td>Sidebar Item</td>
+                        <td><code>0.75rem 1rem</code></td>
+                        <td><code>0 0 0.5rem 0</code></td>
+                        <td><code>0.75rem</code> (ícone/texto)</td>
+                    </tr>
+                    <tr>
+                        <td>Form Input</td>
+                        <td><code>0.75rem 1rem</code></td>
+                        <td><code>0 0 1.5rem 0</code></td>
+                        <td><code>0.5rem</code> (label/input)</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>3.3. Border Radius</h3>
+            <div class="token-list">
+                <span class="token">--radius-sm: 4px</span> /* Inputs, badges */<br>
+                <span class="token">--radius-md: 8px</span> /* Cards, botões */<br>
+                <span class="token">--radius-lg: 12px</span> /* Modais, containers */<br>
+                <span class="token">--radius-full: 9999px</span> /* Badges redondos */
+            </div>
+        </div>
+        
+        <div class="page-break"></div>
+        
+        <!-- 4. COMPONENTES BASE -->
+        <div>
+            <h2>🧩 4. Componentes Base</h2>
+            
+            <h3>4.1. Botões</h3>
+            <div class="component-grid">
+                <div class="component-card">
+                    <div style="background: #2563eb; color: white; padding: 0.5rem 1rem; border-radius: 8px; display: inline-block;">
+                        Botão Primário
+                    </div>
+                    <p><code>.btn-primary</code></p>
+                </div>
+                
+                <div class="component-card">
+                    <div style="background: #334155; color: white; padding: 0.5rem 1rem; border-radius: 8px; display: inline-block;">
+                        Botão Secundário
+                    </div>
+                    <p><code>.btn-secondary</code></p>
+                </div>
+                
+                <div class="component-card">
+                    <div style="background: #10b981; color: white; padding: 0.5rem 1rem; border-radius: 8px; display: inline-block;">
+                        Sucesso
+                    </div>
+                    <p><code>.btn-success</code></p>
+                </div>
+                
+                <div class="component-card">
+                    <div style="background: #dc2626; color: white; padding: 0.5rem 1rem; border-radius: 8px; display: inline-block;">
+                        Perigo
+                    </div>
+                    <p><code>.btn-danger</code></p>
+                </div>
+            </div>
+            
+            <h3>4.2. Cards</h3>
+            <div class="component-card">
+                <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                        <div style="font-weight: 600;">Título do Card</div>
+                        <div style="color: #0ea5e9;">↗</div>
+                    </div>
+                    <div style="color: #94a3b8; font-size: 0.875rem;">
+                        Descrição ou conteúdo do card. Pode conter métricas, listas ou ações.
+                    </div>
+                </div>
+                <p><code>.card</code> com <code>.card-header</code> e <code>.card-body</code></p>
+            </div>
+            
+            <h3>4.3. Inputs e Formulários</h3>
+            <div class="component-grid">
+                <div class="component-card">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Label</label>
+                        <input type="text" style="width: 100%; padding: 0.75rem 1rem; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: white;" placeholder="Placeholder">
+                    </div>
+                    <p><code>.form-control</code></p>
+                </div>
+                
+                <div class="component-card">
+                    <label style="display: flex; align-items: center; gap: 1rem;">
+                        <div style="position: relative; width: 60px; height: 30px;">
+                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #334155; border-radius: 34px;"></div>
+                            <div style="position: absolute; height: 22px; width: 22px; left: 4px; bottom: 4px; background: white; border-radius: 50%;"></div>
+                        </div>
+                        <span>Toggle Switch</span>
+                    </label>
+                    <p><code>.toggle-switch</code></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="page-break"></div>
+        
+        <!-- 5. ESTADOS E FEEDBACK -->
+        <div>
+            <h2>🔄 5. Estados e Feedback</h2>
+            
+            <h3>5.1. Estados de Interação</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Estado</th>
+                        <th>Cor</th>
+                        <th>Opacidade</th>
+                        <th>Cursor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Normal</td>
+                        <td>100%</td>
+                        <td>1</td>
+                        <td><code>default</code></td>
+                    </tr>
+                    <tr>
+                        <td>Hover</td>
+                        <td>10% mais escuro/claro</td>
+                        <td>1</td>
+                        <td><code>pointer</code></td>
+                    </tr>
+                    <tr>
+                        <td>Active</td>
+                        <td>20% mais escuro</td>
+                        <td>0.9</td>
+                        <td><code>pointer</code></td>
+                    </tr>
+                    <tr>
+                        <td>Focus</td>
+                        <td>+ <code>outline: 2px solid #0ea5e9</code></td>
+                        <td>1</td>
+                        <td><code>pointer</code></td>
+                    </tr>
+                    <tr>
+                        <td>Disabled</td>
+                        <td>50% mais claro</td>
+                        <td>0.5</td>
+                        <td><code>not-allowed</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>5.2. Estados de Carregamento</h3>
+            <div class="component-grid">
+                <div class="component-card">
+                    <div style="background: #2563eb; color: white; padding: 0.5rem 1rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <div style="width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        Carregando...
+                    </div>
+                    <p>Spinner + texto desabilitado</p>
+                </div>
+                
+                <div class="component-card">
+                    <div style="background: #1e293b; padding: 1.5rem; border-radius: 8px; border: 1px solid #334155;">
+                        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                            <div style="width: 40px; height: 40px; background: #334155; border-radius: 8px; animation: pulse 1.5s infinite;"></div>
+                            <div style="flex: 1;">
+                                <div style="height: 12px; background: #334155; border-radius: 4px; margin-bottom: 8px; animation: pulse 1.5s infinite; animation-delay: 0.2s;"></div>
+                                <div style="height: 8px; background: #334155; border-radius: 4px; width: 70%; animation: pulse 1.5s infinite; animation-delay: 0.4s;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <p>Skeleton loading</p>
+                </div>
+            </div>
+            
+            <style>
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.5; }
+                }
+            </style>
+        </div>
+        
+        <div class="page-break"></div>
+        
+        <!-- 6. ACESSIBILIDADE -->
+        <div>
+            <h2>♿ 6. Acessibilidade</h2>
+            
+            <h3>6.1. Contraste Mínimo</h3>
+            <div class="token-list">
+                <strong>Texto Normal:</strong> Contraste ≥ 4.5:1<br>
+                <strong>Texto Grande (18pt+):</strong> Contraste ≥ 3:1<br>
+                <strong>Elementos UI:</strong> Contraste ≥ 3:1<br>
+                <strong>Testar com:</strong> <a href="https://webaim.org/resources/contrastchecker/" target="_blank">WebAIM Contrast Checker</a>
+            </div>
+            
+            <h3>6.2. Navegação por Teclado</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tecla</th>
+                        <th>Ação</th>
+                        <th>Implementação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>Tab</code></td>
+                        <td>Navegar entre elementos focáveis</td>
+                        <td><code>tabindex="0"</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>Enter/Space</code></td>
+                        <td>Ativar elemento</td>
+                        <td><code>keydown event</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>Esc</code></td>
+                        <td>Fechar modais</td>
+                        <td><code>Escape key listener</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>Arrow Keys</code></td>
+                        <td>Navegar em menus</td>
+                        <td><code>focus management</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>6.3. ARIA Labels</h3>
+            <div class="token-list">
+                <span class="token">aria-label="Menu principal"</span><br>
