@@ -15,7 +15,7 @@
                 <i class="fas fa-brain logo-icon"></i>
                 <span class="logo-text">SINAPSE</span>
             </a>
-            
+
             <nav class="nav-menu">
                 <a href="#" class="nav-item active" data-page="dashboard">
                     <i class="fas fa-tachometer-alt nav-icon"></i>
@@ -42,7 +42,7 @@
                     <span>Histórico</span>
                 </a>
             </nav>
-            
+
             <div class="system-status">
                 <div class="status-indicator">
                     <div class="status-dot"></div>
@@ -54,13 +54,13 @@
                 </div>
             </div>
         </aside>
-        
-        <!-- CONTEÚDO PRINCIPAL (MUDARÁ CONFORME A PÁGINA) -->
+
+        <!-- CONTEÚDO PRINCIPAL -->
         <main class="main-content" id="main-content">
-            <!-- O conteúdo será carregado dinamicamente aqui -->
+            <!-- Carregado dinamicamente -->
         </main>
     </div>
-    
+
     <!-- MODAL GENÉRICO -->
     <div class="modal" id="modal">
         <div class="modal-content">
@@ -78,8 +78,14 @@
         </div>
     </div>
 
+    <!-- DEPENDÊNCIAS EXTERNAS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+    <!-- MÓDULOS DA APLICAÇÃO (ordem importa) -->
     <script src="scripts/js/state.js"></script>
     <script src="scripts/js/data.js"></script>
+    <script src="scripts/js/storage.js"></script>
+    <script src="scripts/js/charts.js"></script>
     <script src="scripts/js/utils.js"></script>
     <script src="scripts/js/pages.js"></script>
     <script src="scripts/js/events.js"></script>

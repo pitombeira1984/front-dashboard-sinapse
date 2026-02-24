@@ -1,5 +1,7 @@
 // ===== GERENCIAMENTO DE ESTADO =====
-        let currentPage = 'dashboard';
-        let currentAlertFilter = 'all';
-        let currentTimeRange = '24h';
-        let currentSettingsTab = 'general';
+const AppState = {
+    currentPage: 'dashboard',
+    currentAlertFilter: 'all',
+    currentTimeRange: '24h',
+    currentSettingsTab: 'general',
+};
