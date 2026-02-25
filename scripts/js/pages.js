@@ -284,7 +284,7 @@ function getDevicesContent() {
                         <option value="Switch">Switch</option>
                         <option value="Radio">Rádio</option>
                     </select>
-                    <select id="device-filter-status" class="form-control" style="width: 140px;">
+                    <select id="device-filter-status" class="form-control" style="width: 160px;">
                         <option value="">Todos status</option>
                         <option value="online">Online</option>
                         <option value="offline">Offline</option>
