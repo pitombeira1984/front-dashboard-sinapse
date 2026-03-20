@@ -37,6 +37,10 @@ function initCommonEvents() {
 function initDashboardEvents() {
     setTimeout(() => initDashboardCharts(AppState.currentTimeRange), 50);
 
+    //LINHAS ADICIONADAS — ativar dados reais do servidor mock
+    API.startPolling(applyLiveData);
+    enrichDeviceCards();
+
     document.querySelectorAll('.chart-range-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             document.querySelectorAll('.chart-range-btn').forEach(b => {

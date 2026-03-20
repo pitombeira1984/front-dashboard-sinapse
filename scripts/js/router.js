@@ -25,6 +25,9 @@ function updatePageTitle(page) {
 }
 
 function loadPageContent(page) {
+    // LINHA ADICIONADA — para o polling antes de trocar de página
+    if (typeof API !== 'undefined') API.stopPolling();
+
     const contentDiv = document.getElementById('main-content');
 
     const pageMap = {
