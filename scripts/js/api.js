@@ -88,6 +88,9 @@ function updateServerStatus(online) {
 function applyLiveData(data) {
     if (!data) return;
 
+    // ── Atualizar gráficos em tempo real ──────────────────────────────────
+    if (typeof pushChartPoint === 'function') pushChartPoint(data);
+
     // KPIs
     const setCPU  = document.getElementById('cpu-usage');
     const setLat  = document.getElementById('latency');
