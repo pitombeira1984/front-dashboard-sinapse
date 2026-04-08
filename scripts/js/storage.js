@@ -1,107 +1,89 @@
-// ===== CAMADA BASE DE STORAGE =====
+// ===== CAMADA DE CACHE LOCAL (localStorage) =====
+// O servidor é a fonte de verdade. O localStorage serve apenas como
+// cache para leitura rápida entre sincronizações (a cada 30s).
+// Todas as escritas passam pela API primeiro, depois atualizam o cache.
+
 const Storage = {
     PREFIX: 'sinapse_',
-
-    set(key, value) {
-        try {
-            localStorage.setItem(this.PREFIX + key, JSON.stringify(value));
-            return true;
-        } catch (e) {
-            console.warn('Storage.set error:', e);
-            return false;
-        }
-    },
-
-    get(key, fallback = null) {
-        try {
-            const raw = localStorage.getItem(this.PREFIX + key);
-            return raw !== null ? JSON.parse(raw) : fallback;
-        } catch (e) {
-            return fallback;
-        }
-    },
-
-    remove(key) { localStorage.removeItem(this.PREFIX + key); },
-
-    clear() {
-        Object.keys(localStorage)
-            .filter(k => k.startsWith(this.PREFIX))
-            .forEach(k => localStorage.removeItem(k));
-    }
+    set(key, value)  { try { localStorage.setItem(this.PREFIX + key, JSON.stringify(value)); return true; } catch(e) { return false; } },
+    get(key, fallback = null) { try { const r = localStorage.getItem(this.PREFIX + key); return r !== null ? JSON.parse(r) : fallback; } catch(e) { return fallback; } },
+    remove(key)      { localStorage.removeItem(this.PREFIX + key); },
+    clear()          { Object.keys(localStorage).filter(k => k.startsWith(this.PREFIX)).forEach(k => localStorage.removeItem(k)); },
 };
 
-// ===== DISPOSITIVOS =====
+// ── Dispositivos ──────────────────────────────────────────────────────────────
 const DeviceStorage = {
     KEY: 'devices',
-    getAll()      { return Storage.get(this.KEY, sampleData.devices); },
-    save(d)       { return Storage.set(this.KEY, d); },
-    add(device) {
-        const list = this.getAll();
-        const item = { ...device, id: Date.now(), status: device.status || 'online' };
-        list.push(item);
-        this.save(list);
+    getAll()           { return Storage.get(this.KEY, sampleData.devices); },
+    // Escrita: API primeiro, cache depois
+    async add(device) {
+        const item = await API.addDevice(device);
+        if (item) { const list = this.getAll(); list.push(item); Storage.set(this.KEY, list); }
         return item;
     },
-    update(id, fields) {
-        const list = this.getAll();
-        const idx  = list.findIndex(d => d.id === id);
-        if (idx === -1) return false;
-        list[idx] = { ...list[idx], ...fields };
-        this.save(list);
-        return true;
+    async update(id, fields) {
+        const item = await API.updateDevice(id, fields);
+        if (item) Storage.set(this.KEY, this.getAll().map(d => d.id === id ? item : d));
+        return item;
     },
-    remove(id) { this.save(this.getAll().filter(d => d.id !== id)); },
-    reset()    { Storage.remove(this.KEY); }
+    async remove(id) {
+        await API.deleteDevice(id);
+        Storage.set(this.KEY, this.getAll().filter(d => d.id !== id));
+    },
+    reset() { Storage.remove(this.KEY); },
 };
 
-// ===== ALERTAS =====
+// ── Alertas ───────────────────────────────────────────────────────────────────
 const AlertStorage = {
     KEY: 'alerts',
-    getAll()    { return Storage.get(this.KEY, sampleData.alerts); },
-    save(a)     { return Storage.set(this.KEY, a); },
-    resolve(id) {
-        this.save(this.getAll().map(a =>
-            a.id === id ? { ...a, severity: 'resolved', resolvedAt: new Date().toLocaleString('pt-BR') } : a
-        ));
+    getAll()        { return Storage.get(this.KEY, sampleData.alerts); },
+    async resolve(id) {
+        await API.resolveAlert(id);
+        Storage.set(this.KEY, this.getAll().map(a => a.id === id ? { ...a, severity: 'resolved', resolvedAt: new Date().toLocaleString('pt-BR') } : a));
     },
-    ignore(id)  { this.save(this.getAll().filter(a => a.id !== id)); },
-    add(alert) {
-        const list = this.getAll();
-        const item = { ...alert, id: Date.now() };
-        list.unshift(item);
-        this.save(list);
+    async ignore(id) {
+        await API.deleteAlert(id);
+        Storage.set(this.KEY, this.getAll().filter(a => a.id !== id));
+    },
+    async add(alert) {
+        const item = await API.addAlert(alert);
+        if (item) { const list = this.getAll(); list.unshift(item); Storage.set(this.KEY, list); }
         return item;
     },
-    reset()     { Storage.remove(this.KEY); }
+    reset() { Storage.remove(this.KEY); },
 };
 
-// ===== REGRAS DE ALERTA =====
+// ── Regras de Alerta ──────────────────────────────────────────────────────────
 const AlertRulesStorage = {
     KEY: 'alert_rules',
     defaults: [
-        { id: 1, name: 'Alta CPU',           condition: 'CPU > 90% por 5 min',               action: 'Email + Telegram',              active: true },
-        { id: 2, name: 'Degradação Óptica',  condition: 'Sinal < -30dBm ou queda > 1dB/dia', action: 'Alerta Dashboard + Telegram',   active: true },
+        { id: 1, name: 'Sinal Óptico Baixo', condition: 'RxPower < -24 dBm',   action: 'Alerta Dashboard + Telegram', severity: 'critical', active: true },
+        { id: 2, name: 'CPU Alta',            condition: 'CPU > 80% por 5 min', action: 'Email + Telegram',            severity: 'warning',  active: true },
     ],
-    getAll()    { return Storage.get(this.KEY, this.defaults); },
-    save(r)     { return Storage.set(this.KEY, r); },
-    add(rule) {
-        const list = this.getAll();
-        const item = { ...rule, id: Date.now(), active: true };
-        list.push(item);
-        this.save(list);
+    getAll() { return Storage.get(this.KEY, this.defaults); },
+    async add(rule) {
+        const item = await API.addRule(rule);
+        if (item) { const list = this.getAll(); list.push(item); Storage.set(this.KEY, list); }
         return item;
     },
-    toggle(id) {
-        this.save(this.getAll().map(r => r.id === id ? { ...r, active: !r.active } : r));
+    async toggle(id) {
+        const item = await API.toggleRule(id);
+        if (item) Storage.set(this.KEY, this.getAll().map(r => r.id === id ? item : r));
     },
-    update(id, fields) {
-        this.save(this.getAll().map(r => r.id === id ? { ...r, ...fields } : r));
+    async update(id, fields) {
+        const item = await API.updateRule(id, fields);
+        if (item) Storage.set(this.KEY, this.getAll().map(r => r.id === id ? item : r));
+        return item;
     },
-    remove(id)  { this.save(this.getAll().filter(r => r.id !== id)); },
-    reset()     { Storage.remove(this.KEY); }
+    async remove(id) {
+        await API.deleteRule(id);
+        Storage.set(this.KEY, this.getAll().filter(r => r.id !== id));
+    },
+    reset() { Storage.remove(this.KEY); },
 };
 
-// ===== MANUTENÇÕES AGENDADAS =====
+// ── Manutenções ───────────────────────────────────────────────────────────────
+// Manutenções continuam no localStorage (não há endpoint no servidor para elas)
 const MaintenanceStorage = {
     KEY: 'maintenances',
     getAll()    { return Storage.get(this.KEY, []); },
@@ -111,132 +93,61 @@ const MaintenanceStorage = {
         const newItem = { ...item, id: Date.now(), status: 'agendado' };
         list.unshift(newItem);
         this.save(list);
-        HistoryStorage.add({
-            event:    'Manutenção Agendada',
-            device:   item.device,
-            duration: item.duration || '--',
-            action:   item.description || 'Manutenção programada',
-            user:     'admin',
-            type:     'maintenance'
-        });
+        // Registrar no histórico do servidor
+        API.addHistory({ event: 'Manutenção Agendada', device: item.device, duration: item.duration || '--', action: item.description || 'Manutenção programada', user: 'admin', type: 'maintenance' });
         return newItem;
     },
-    remove(id)  { this.save(this.getAll().filter(i => i.id !== id)); },
-    reset()     { Storage.remove(this.KEY); }
+    remove(id) { this.save(this.getAll().filter(i => i.id !== id)); },
+    reset()    { Storage.remove(this.KEY); },
 };
 
-// ===== HISTÓRICO =====
+// ── Histórico ─────────────────────────────────────────────────────────────────
 const HistoryStorage = {
     KEY: 'history',
-    getAll() {
-        return Storage.get(this.KEY, sampleData.history.map(h => ({
-            ...h,
-            user: 'Sistema',
-            type: 'alert'
-        })));
-    },
-    save(items) { return Storage.set(this.KEY, items); },
-    add(item) {
-        const list    = this.getAll();
-        const newItem = {
-            ...item,
-            id:   Date.now(),
-            time: new Date().toLocaleString('pt-BR', {
-                day: '2-digit', month: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit'
-            }).replace(',', '')
-        };
-        list.unshift(newItem);
-        this.save(list);
+    getAll() { return Storage.get(this.KEY, sampleData.history.map(h => ({ ...h, user: 'Sistema', type: 'alert' }))); },
+    async add(item) {
+        const newItem = await API.addHistory(item);
+        if (newItem) { const list = this.getAll(); list.unshift(newItem); Storage.set(this.KEY, list); }
         return newItem;
     },
-    reset() { Storage.remove(this.KEY); }
+    reset() { Storage.remove(this.KEY); },
 };
 
-// ===== BACKUPS =====
+// ── Backups ───────────────────────────────────────────────────────────────────
 const BackupStorage = {
     KEY: 'backups',
-    getAll()       { return Storage.get(this.KEY, []); },
-    save(backups)  { return Storage.set(this.KEY, backups); },
-
-    create() {
-        const now     = new Date();
-        const dateStr = now.toISOString().slice(0, 10);
-        const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-        const snapshot = {
-            id:       Date.now(),
-            filename: `backup-${dateStr}_${timeStr.replace(':', 'h')}.zip`,
-            date:     `${dateStr} ${timeStr}`,
-            size:     `${(Math.random() * 2 + 0.5).toFixed(1)} MB`,
-            devices:  JSON.parse(JSON.stringify(DeviceStorage.getAll())),
-            alerts:   JSON.parse(JSON.stringify(AlertStorage.getAll())),
-            rules:    JSON.parse(JSON.stringify(AlertRulesStorage.getAll())),
-            settings: JSON.parse(JSON.stringify(SettingsStorage.get())),
-            history:  JSON.parse(JSON.stringify(HistoryStorage.getAll())),
-        };
-
-        const backups = this.getAll();
-        backups.unshift(snapshot);
-        this.save(backups.slice(0, 10)); // manter últimos 10
-
-        HistoryStorage.add({
-            event:    'Backup Criado',
-            device:   'SINAPSE Node',
-            duration: '--',
-            action:   `Backup manual — ${snapshot.filename}`,
-            user:     'admin',
-            type:     'backup'
-        });
-
-        return snapshot;
+    getAll() { return Storage.get(this.KEY, []); },
+    async create() {
+        const snap = await API.createBackup();
+        if (snap) { const list = this.getAll(); list.unshift(snap); Storage.set(this.KEY, list.slice(0, 10)); }
+        return snap;
     },
-
-    restore(id) {
-        const backup = this.getAll().find(b => b.id === id);
-        if (!backup) return false;
-
-        DeviceStorage.save(backup.devices);
-        AlertStorage.save(backup.alerts);
-        AlertRulesStorage.save(backup.rules);
-        if (backup.settings) SettingsStorage.save(backup.settings);
-
-        HistoryStorage.add({
-            event:    'Backup Restaurado',
-            device:   'SINAPSE Node',
-            duration: '--',
-            action:   `Restauração de ${backup.filename}`,
-            user:     'admin',
-            type:     'backup'
-        });
-
-        return true;
+    async restore(id) {
+        const result = await API.restoreBackup(id);
+        if (result) await syncFromServer(); // recarregar tudo do servidor
+        return result;
     },
-
-    remove(id) { this.save(this.getAll().filter(b => b.id !== id)); }
+    async remove(id) {
+        await API.deleteBackup(id);
+        Storage.set(this.KEY, this.getAll().filter(b => b.id !== id));
+    },
 };
 
-// ===== CONFIGURAÇÕES =====
+// ── Configurações ─────────────────────────────────────────────────────────────
 const SettingsStorage = {
     KEY: 'settings',
     defaults: {
-        nodeName:        'SINAPSE-Node-01',
-        timezone:        'America/Fortaleza (UTC-3)',
-        language:        'Português (Brasil)',
-        pollingInterval: '5 minutos',
-        dataRetention:   '6 meses',
-        advancedMetrics: true,
-        notifyEmail:     true,
-        notifyTelegram:  true,
-        notifySMS:       false,
-        email:           'ti@empresa.com',
-        ip:              '192.168.1.100',
-        mask:            '255.255.255.0',
-        gateway:         '192.168.1.1',
-        dns1:            '8.8.8.8',
-        dns2:            '8.8.4.4',
+        nodeName: 'SINAPSE-Node-01', timezone: 'America/Fortaleza (UTC-3)', language: 'Português (Brasil)',
+        pollingInterval: '5 minutos', dataRetention: '6 meses', advancedMetrics: true,
+        notifyEmail: true, notifyTelegram: true, notifySMS: false,
+        email: 'ti@empresa.com', ip: '192.168.1.100', mask: '255.255.255.0',
+        gateway: '192.168.1.1', dns1: '8.8.8.8', dns2: '8.8.4.4',
     },
-    get()          { return Storage.get(this.KEY, this.defaults); },
-    save(settings) { return Storage.set(this.KEY, { ...this.get(), ...settings }); },
-    reset()        { Storage.remove(this.KEY); }
+    get()           { return Storage.get(this.KEY, this.defaults); },
+    async save(s)   {
+        const updated = await API.saveSettings(s);
+        if (updated) Storage.set(this.KEY, updated);
+        return updated;
+    },
+    reset()         { Storage.remove(this.KEY); },
 };

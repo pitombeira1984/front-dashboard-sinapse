@@ -46,6 +46,55 @@ const API = {
     async getLive()       { return this._fetch('/api/metrics/live'); },
     async getAlerts()     { return this._fetch('/api/alerts'); },
 
+    // ── SNMP Traps ─────────────────────────────────────────────────────────
+    async getTraps(filters = {}) {
+        const params = new URLSearchParams();
+        if (filters.type)           params.set('type',           filters.type);
+        if (filters.severity)       params.set('severity',       filters.severity);
+        if (filters.unacknowledged) params.set('unacknowledged', 'true');
+        if (filters.limit)          params.set('limit',          filters.limit);
+        const qs = params.toString();
+        const res = await this._fetchRaw(`/api/traps${qs ? '?' + qs : ''}`);
+        return res?.data ?? [];
+    },
+    async getTrapStats()           {
+        const res = await this._fetchRaw('/api/traps/stats');
+        return res ?? null;
+    },
+    async getTrapTypes()           { return this._fetch('/api/traps/types'); },
+    async acknowledgeTraps(ids)    { return this._fetchPut('/api/traps/acknowledge',     { ids }); },
+    async acknowledgeAllTraps()    { return this._fetchPut('/api/traps/acknowledge-all', {}); },
+
+
+
+
+    async _fetchRaw(path) {
+        try {
+            const res  = await fetch(`${this.BASE_URL}${path}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+            if (!this.connected) { this.connected = true; this._notify('connected', null); updateServerStatus(true); }
+            return json;
+        } catch (err) {
+            if (this.connected) { this.connected = false; this._notify('disconnected', err.message); updateServerStatus(false); }
+            return null;
+        }
+    },
+    async _fetchPost(path, body) {
+        try {
+            const res  = await fetch(`${this.BASE_URL}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return await res.json();
+        } catch (err) { console.warn('API POST error:', err); return null; }
+    },
+    async _fetchPut(path, body) {
+        try {
+            const res  = await fetch(`${this.BASE_URL}${path}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return await res.json();
+        } catch (err) { console.warn('API PUT error:', err); return null; }
+    },
+
     // ── Polling ────────────────────────────────────────────────────────────
     startPolling(callback) {
         this.stopPolling();
@@ -63,6 +112,34 @@ const API = {
             this.pollTimer = null;
         }
     },
+
+
+    // ── Trap Polling (5s) — separado do polling de métricas ───────────────
+    trapTimer:   null,
+    trapLastId:  null,
+
+    startTrapPolling(callback) {
+        this.stopTrapPolling();
+        const poll = async () => {
+            const res = await this.getTrapStats();
+            if (!res) return;
+            // getTrapStats retorna { ok, data: { total, unacknowledged, ... } }
+            const stats   = res.data ?? res;
+            const lastTrap = stats.lastTrap;
+            if (lastTrap && lastTrap.id !== this.trapLastId) {
+                this.trapLastId = lastTrap.id;
+                callback(stats, lastTrap);
+            }
+        };
+        poll();
+        this.trapTimer = setInterval(poll, this.POLL_INTERVAL);
+    },
+
+    stopTrapPolling() {
+        if (this.trapTimer) { clearInterval(this.trapTimer); this.trapTimer = null; }
+    },
+
+
 
     // ── Eventos ────────────────────────────────────────────────────────────
     on(event, fn) { this.listeners.push({ event, fn }); },

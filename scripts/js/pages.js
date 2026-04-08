@@ -233,6 +233,9 @@ function getDashboardContent() {
             <div class="devices-grid">${renderDeviceCards(DeviceStorage.getAll())}</div>
         </div>
 
+        <!-- SNMP Traps Summary -->
+        <div id="trap-summary-placeholder"></div>
+
         <footer class="footer">
             <div class="node-info"><i class="fas fa-microchip"></i> <span>SINAPSE Node • Orange Pi 3B • 192.168.1.100</span></div>
             <div><span id="data-update">Última atualização: --:--:--</span></div>
@@ -349,6 +352,9 @@ function getAlertsContent() {
                 <button class="btn btn-secondary" onclick="resetAlerts()"><i class="fas fa-undo"></i> Resetar dados</button>
             </div>
         </div>
+
+        <!-- SNMP Traps Section -->
+        <div id="traps-section-placeholder"></div>
 
         <div class="card">
             <div class="section-header">

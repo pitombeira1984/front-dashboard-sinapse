@@ -39,6 +39,28 @@ function initDashboardEvents() {
 
     //LINHAS ADICIONADAS — ativar dados reais do servidor mock
     API.startPolling(applyLiveData);
+
+    // Trap polling — atualiza badge e toast a cada novo trap
+    API.startTrapPolling(async (stats, lastTrap) => {
+        // stats já é o objeto { total, unacknowledged, critical, ... }
+        updateTrapBadge(stats);
+        showTrapToast(lastTrap);
+        const trapPlaceholder = document.getElementById('trap-summary-placeholder');
+        if (trapPlaceholder) {
+            trapPlaceholder.outerHTML = renderTrapSummaryCard(stats);
+        }
+    });
+
+    // Carregar card de resumo de traps no dashboard
+    (async () => {
+        const res   = await API.getTrapStats();
+        const stats = res?.data ?? res;
+        if (stats) {
+            updateTrapBadge(stats);
+            const placeholder = document.getElementById('trap-summary-placeholder');
+            if (placeholder) placeholder.outerHTML = renderTrapSummaryCard(stats);
+        }
+    })();
     enrichDeviceCards();
 
     document.querySelectorAll('.chart-range-btn').forEach(btn => {
@@ -232,6 +254,20 @@ function openAddDeviceModal() {
 
 // ===== ALERTAS =====
 function initAlertsEvents() {
+    // Carregar seção de Traps na página de Alertas
+    (async () => {
+        const [traps, statsRes] = await Promise.all([API.getTraps(), API.getTrapStats()]);
+        const stats = statsRes?.data ?? statsRes;
+        const placeholder = document.getElementById('traps-section-placeholder');
+        if (placeholder) {
+            placeholder.outerHTML = renderTrapsSection(traps, stats);
+            // Vincular eventos dos filtros de trap
+            document.getElementById('trap-filter-severity')?.addEventListener('change', filterTraps);
+            document.getElementById('trap-filter-type')?.addEventListener('change', filterTraps);
+        }
+        if (stats) updateTrapBadge(stats);
+    })();
+
     // Filtros de severidade
     document.querySelectorAll('.filter-bar .filter-btn').forEach(btn => {
         btn.addEventListener('click', function () {

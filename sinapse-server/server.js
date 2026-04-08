@@ -22,6 +22,7 @@
 const express      = require('express');
 const cors         = require('cors');
 const { getSnapshot, getHistory, OIDs } = require('./mock-engine');
+const traps = require('./trap-engine');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -52,6 +53,8 @@ function getCachedSnapshot() {
         lastSnapshot   = getSnapshot();
         lastSnapshotAt = now;
     }
+    // Avaliar Traps a cada snapshot novo
+    traps.evaluateTraps(lastSnapshot);
     return lastSnapshot;
 }
 
@@ -61,7 +64,7 @@ function getCachedSnapshot() {
 app.get('/api/status', (_req, res) => {
     send(res, {
         server:    'SINAPSE Mock Server',
-        version:   '1.0.0',
+        version:   '1.1.0',
         mode:      'mock',
         uptime:    process.uptime(),
         timestamp: new Date().toISOString(),
@@ -191,6 +194,47 @@ app.get('/api/oids', (_req, res) => {
     send(res, { data: OIDs });
 });
 
+
+// ── SNMP Traps ────────────────────────────────────────────────────────────────
+
+// GET /api/traps — listar traps com filtros opcionais
+// Query params: ?type=linkDown&severity=critical&unacknowledged=true&limit=50
+app.get('/api/traps', (req, res) => {
+    const { type, severity, unacknowledged, limit } = req.query;
+    const filters = {};
+    if (type)             filters.type             = type;
+    if (severity)         filters.severity         = severity;
+    if (unacknowledged)   filters.unacknowledged   = unacknowledged === 'true';
+    let result = traps.getTraps(filters);
+    if (limit)            result = result.slice(0, parseInt(limit));
+    res.json({ ok: true, count: result.length, data: result });
+});
+
+// GET /api/traps/stats — contadores e estatísticas
+app.get('/api/traps/stats', (_req, res) => {
+    res.json({ ok: true, data: traps.getTrapStats() });
+});
+
+// GET /api/traps/types — catálogo de tipos de trap
+app.get('/api/traps/types', (_req, res) => {
+    res.json({ ok: true, data: traps.getTrapTypes() });
+});
+
+// PUT /api/traps/acknowledge — reconhecer traps por IDs
+// Body: { ids: ["trap-id-1", "trap-id-2"] }
+app.put('/api/traps/acknowledge', (req, res) => {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) return res.status(400).json({ ok: false, error: 'ids deve ser um array' });
+    traps.acknowledgeTraps(ids);
+    res.json({ ok: true, message: `${ids.length} trap(s) reconhecido(s)` });
+});
+
+// PUT /api/traps/acknowledge-all — reconhecer todos os traps pendentes
+app.put('/api/traps/acknowledge-all', (_req, res) => {
+    traps.acknowledgeAllTraps();
+    res.json({ ok: true, message: 'Todos os traps reconhecidos' });
+});
+
 // ── 404 ────────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
     res.status(404).json({
@@ -208,11 +252,19 @@ app.use((req, res) => {
             'GET /api/metrics/live',
             'GET /api/alerts',
             'GET /api/oids',
+            'GET /api/traps',
+            'GET /api/traps/stats',
+            'GET /api/traps/types',
+            'PUT /api/traps/acknowledge',
+            'PUT /api/traps/acknowledge-all',
         ]
     });
 });
 
 // ── Iniciar ────────────────────────────────────────────────────────────────────
+// Gerar Traps de inicialização
+traps.generateStartupTraps();
+
 app.listen(PORT, () => {
     console.log('');
     console.log('╔══════════════════════════════════════════════════╗');
