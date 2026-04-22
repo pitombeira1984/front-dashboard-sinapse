@@ -38,7 +38,25 @@ function initDashboardEvents() {
     setTimeout(() => initDashboardCharts(AppState.currentTimeRange), 50);
 
     //LINHAS ADICIONADAS — ativar dados reais do servidor mock
-    API.startPolling(applyLiveData);
+    API.startPolling(data => {
+        applyLiveData(data);
+        // Push GPON charts em tempo real
+        if (typeof pushGPONChartPoints === 'function') pushGPONChartPoints(data);
+        // Atualizar barra de disponibilidade
+        const bar = document.getElementById('cpu-bar');
+        if (bar && data.availability !== undefined) {
+            bar.style.width = `${data.availability}%`;
+            bar.style.backgroundColor = data.availability >= 99 ? 'var(--success-color)' : data.availability >= 90 ? 'var(--warning-color)' : 'var(--danger-color)';
+        }
+        // Atualizar trend de ONUs
+        const trend = document.getElementById('onus-trend');
+        if (trend && data.onusOnline !== undefined) {
+            const offline = (data.onusTotal ?? 8) - data.onusOnline;
+            trend.innerHTML = offline > 0
+                ? `<i class="fas fa-exclamation-triangle" style="color:var(--danger-color);"></i> <span style="color:var(--danger-color);">${offline} offline</span>`
+                : `<i class="fas fa-check-circle" style="color:var(--success-color);"></i> <span>Todas online</span>`;
+        }
+    });
 
     // Trap polling — atualiza badge e toast a cada novo trap
     API.startTrapPolling(async (stats, lastTrap) => {
@@ -73,6 +91,8 @@ function initDashboardEvents() {
             this.style.cssText = '';
             AppState.currentTimeRange = this.getAttribute('data-range');
             renderTrafficChart(AppState.currentTimeRange);
+            // Re-renderizar gráficos GPON com novo range
+            API.getHistory().then(h => { if(h) { renderOpticalSignalChart(h); renderLatencyGPONChart(h); } });
         });
     });
 
@@ -84,6 +104,37 @@ function initDashboardEvents() {
 function initDevicesEvents() {
     const addBtn = document.getElementById('add-device-btn-page');
     if (addBtn) addBtn.addEventListener('click', openAddDeviceModal);
+
+    // Carregar tabela de ONUs
+    (async () => {
+        const onus = await API.getONUs();
+        const tbody = document.getElementById('onus-table-body');
+        const onlineBadge  = document.getElementById('onus-online-badge');
+        const offlineBadge = document.getElementById('onus-offline-badge');
+        if (tbody && onus) {
+            tbody.innerHTML = renderONURows(onus);
+            const online  = onus.filter(o => o.status === 'online').length;
+            const offline = onus.length - online;
+            if (onlineBadge)  onlineBadge.textContent  = `${online} Online`;
+            if (offlineBadge) {
+                offlineBadge.textContent  = `${offline} Offline`;
+                offlineBadge.style.display = offline > 0 ? 'inline-flex' : 'none';
+            }
+        }
+
+        // Polling da tabela de ONUs (atualizar a cada 5s)
+        API.startPolling(async () => {
+            const fresh = await API.getONUs();
+            const t     = document.getElementById('onus-table-body');
+            if (t && fresh) {
+                t.innerHTML = renderONURows(fresh);
+                const on  = fresh.filter(o => o.status === 'online').length;
+                const off = fresh.length - on;
+                if (onlineBadge)  onlineBadge.textContent  = `${on} Online`;
+                if (offlineBadge) { offlineBadge.textContent = `${off} Offline`; offlineBadge.style.display = off > 0 ? 'inline-flex' : 'none'; }
+            }
+        });
+    })();
 
     // Filtros em tempo real
     const searchInput  = document.getElementById('device-search');

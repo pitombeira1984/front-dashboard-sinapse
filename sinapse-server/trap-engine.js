@@ -148,27 +148,10 @@ function makeTrap(type, device, varbinds = {}) {
 
 // ── Gerar Traps de inicialização ──────────────────────────────────────────────
 function generateStartupTraps() {
-    if (trapState.flags.coldStartSent) return;
+    // Fila começa vazia — traps são gerados apenas quando anomalias reais ocorrem.
+    // coldStart e linkUp de boot são omitidos intencionalmente para não poluir
+    // a lista com eventos técnicos de inicialização do servidor mock.
     trapState.flags.coldStartSent = true;
-
-    // coldStart no boot
-    makeTrap('coldStart', 'Home Gateway HG8145X6', {
-        sysDescr:    'Huawei EchoLife HG8145X6',
-        sysUpTime:   0,
-        sysLocation: 'Rack Principal — NOC',
-    });
-
-    // linkUp em todas as interfaces que estão ativas
-    setTimeout(() => {
-        ['eth0', 'wlan0', 'wlan1'].forEach(iface => {
-            makeTrap('linkUp', 'Home Gateway HG8145X6', {
-                ifIndex:  iface === 'eth0' ? 1 : iface === 'wlan0' ? 4 : 5,
-                ifDescr:  iface === 'eth0' ? 'WAN — PON Uplink' : iface === 'wlan0' ? 'Wi-Fi 2.4 GHz' : 'Wi-Fi 5 GHz',
-                ifAdminStatus: 'up',
-                ifOperStatus:  'up',
-            });
-        });
-    }, 2000);
 }
 
 // ── Avaliar métricas e gerar Traps automaticamente ────────────────────────────
@@ -176,7 +159,7 @@ function evaluateTraps(snapshot) {
     const { optical, system, interfaces, anomaly } = snapshot;
 
     // ── Trap Óptico ───────────────────────────────────────────────────────────
-    if (optical.rxPower < optical.thresholds.rxMin + 3 && !trapState.flags.opticalAlarmActive) {
+    if (optical.rxPower < -22 && !trapState.flags.opticalAlarmActive) {
         trapState.flags.opticalAlarmActive = true;
         makeTrap('opticalDegradation', snapshot.device.name, {
             hwGponOntRxPower:    optical.rxPowerRaw,   // valor SNMP bruto (dBm × 100)
@@ -186,7 +169,7 @@ function evaluateTraps(snapshot) {
             ber:                 optical.ber,
             opticalStatus:       optical.status,
         });
-    } else if (optical.rxPower >= optical.thresholds.rxMin + 3 && trapState.flags.opticalAlarmActive) {
+    } else if (optical.rxPower >= -20 && trapState.flags.opticalAlarmActive) {
         // Sinal recuperado — gerar Trap informativo
         trapState.flags.opticalAlarmActive = false;
         makeTrap('linkUp', snapshot.device.name, {
@@ -197,7 +180,7 @@ function evaluateTraps(snapshot) {
     }
 
     // ── Trap Temperatura ──────────────────────────────────────────────────────
-    if (system.temperature > 70 && !trapState.flags.temperatureAlarmActive) {
+    if (system.temperature > 50 && !trapState.flags.temperatureAlarmActive) {
         trapState.flags.temperatureAlarmActive = true;
         makeTrap('highTemperature', snapshot.device.name, {
             temperature:       system.temperature,
@@ -205,19 +188,19 @@ function evaluateTraps(snapshot) {
             thresholdCelsius:  70,
             hwGponOntLocation: snapshot.device.location,
         });
-    } else if (system.temperature <= 65 && trapState.flags.temperatureAlarmActive) {
+    } else if (system.temperature <= 45 && trapState.flags.temperatureAlarmActive) {
         trapState.flags.temperatureAlarmActive = false;
     }
 
     // ── Trap CPU ──────────────────────────────────────────────────────────────
-    if (system.cpu > 80 && !trapState.flags.cpuAlarmActive) {
+    if (system.cpu > 70 && !trapState.flags.cpuAlarmActive) {
         trapState.flags.cpuAlarmActive = true;
         makeTrap('highCPU', snapshot.device.name, {
             hrProcessorLoad: system.cpu,
             memPercent:      system.memPercent,
             threshold:       80,
         });
-    } else if (system.cpu <= 70 && trapState.flags.cpuAlarmActive) {
+    } else if (system.cpu <= 60 && trapState.flags.cpuAlarmActive) {
         trapState.flags.cpuAlarmActive = false;
     }
 
@@ -240,7 +223,7 @@ function evaluateTraps(snapshot) {
 
     // ── Trap authenticationFailure (ocasional — simula tentativa inválida) ────
     const now = Date.now();
-    if (now - trapState.flags.lastAuthFailAt > 90000 && Math.random() < 0.005) {
+    if (now - trapState.flags.lastAuthFailAt > 30000 && Math.random() < 0.08) {
         trapState.flags.lastAuthFailAt = now;
         makeTrap('authenticationFailure', snapshot.device.name, {
             community:   'private',   // community inválida tentada
@@ -250,7 +233,7 @@ function evaluateTraps(snapshot) {
     }
 
     // ── Trap coldStart/warmStart via anomalia ─────────────────────────────────
-    if (anomaly?.type === 'cpuSpike' && Math.random() < 0.03) {
+    if (anomaly?.type === 'cpuSpike' && Math.random() < 0.15) {
         makeTrap('warmStart', snapshot.device.name, {
             reason:   'Processo watchdog reiniciou o módulo de gerência',
             sysUpTime: snapshot.device.uptimeTicks,

@@ -46,6 +46,13 @@ const API = {
     async getLive()       { return this._fetch('/api/metrics/live'); },
     async getAlerts()     { return this._fetch('/api/alerts'); },
 
+
+    // ── GPON / ONUs ────────────────────────────────────────────────────────
+    async getTopology()          { return this._fetch('/api/topology'); },
+    async getONUs()              { return this._fetch('/api/onus'); },
+    async getONU(id)             { return this._fetch(`/api/onus/${id}`); },
+    async getGponKPIs()          { return this._fetch('/api/gpon/kpis'); },
+
     // ── SNMP Traps ─────────────────────────────────────────────────────────
     async getTraps(filters = {}) {
         const params = new URLSearchParams();
@@ -197,9 +204,30 @@ function applyLiveData(data) {
         setAvail.textContent = `${avail}%`;
     }
 
-    // Clientes Wi-Fi no lugar de "ONUs" (adaptado para Home Gateway)
+    // KPI: ONUs Ativas
     const onusEl = document.getElementById('onus');
-    if (onusEl) onusEl.textContent = data.wifiClients;
+    if (onusEl) {
+        const active = data.onusOnline ?? data.wifiClients ?? '--';
+        const total  = data.onusTotal  ?? 8;
+        onusEl.textContent = `${active}/${total}`;
+    }
+
+    // KPI: Sinal Médio RxPower
+    const rxEl = document.getElementById('avg-rxpower');
+    if (rxEl && data.avgRxPower) {
+        rxEl.textContent = `${data.avgRxPower} dBm`;
+        rxEl.style.color = data.avgRxPower < -25 ? 'var(--danger-color)' : data.avgRxPower < -22 ? 'var(--warning-color)' : 'var(--success-color)';
+    }
+
+    // KPI: Latência Média real das ONUs
+    if (setLat && data.avgLatency) {
+        setLat.innerHTML = `${data.avgLatency}<span style="font-size:1rem;">ms</span>`;
+    }
+
+    // KPI: Disponibilidade real
+    if (setAvail && data.availability !== undefined) {
+        setAvail.textContent = `${data.availability}%`;
+    }
 
     // Alerta de anomalia automático
     if (data.anomaly) {

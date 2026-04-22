@@ -440,3 +440,210 @@ function renderLatencyChart() {
         }
     });
 }
+
+// ===== GRÁFICOS GPON =====
+
+// 1. LINHA — Evolução do sinal óptico médio ao longo do tempo
+function renderOpticalSignalChart(history) {
+    destroyChart('opticalSignal');
+    const canvas = document.getElementById('chart-optical-signal');
+    if (!canvas) return;
+
+    const count    = history?.rxPower?.length || 120;
+    const interval = (history?.intervalSeconds || 5) * 1000;
+    const now      = Date.now();
+    const labels   = Array.from({length: count}, (_, i) => {
+        const t = new Date(now - (count - 1 - i) * interval);
+        return t.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    });
+
+    const data = history?.rxPower || Array.from({length:120}, () => -20 + Math.random() * 4 - 2);
+
+    ChartRegistry['opticalSignal'] = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'RxPower Médio (dBm)',
+                data,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37,99,235,0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+            }]
+        },
+        options: {
+            ...chartDefaults,
+            plugins: {
+                ...chartDefaults.plugins,
+                annotation: undefined,
+                tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` Sinal: ${ctx.parsed.y} dBm` } }
+            },
+            scales: {
+                ...chartDefaults.scales,
+                y: {
+                    ...chartDefaults.scales.y,
+                    reverse: true,   // dBm: valores mais negativos = sinal mais fraco (fica embaixo)
+                    title: { display: true, text: 'dBm', color: '#64748b' },
+                    // Linhas de threshold
+                    afterDraw(chart) {
+                        const ctx2 = chart.ctx;
+                        const yAxis = chart.scales.y;
+                        [-24, -27].forEach((val, i) => {
+                            const y = yAxis.getPixelForValue(val);
+                            ctx2.save();
+                            ctx2.strokeStyle = i === 0 ? 'rgba(245,158,11,0.5)' : 'rgba(220,38,38,0.5)';
+                            ctx2.lineWidth   = 1;
+                            ctx2.setLineDash([4, 4]);
+                            ctx2.beginPath();
+                            ctx2.moveTo(chart.chartArea.left, y);
+                            ctx2.lineTo(chart.chartArea.right, y);
+                            ctx2.stroke();
+                            ctx2.restore();
+                        });
+                    }
+                }
+            }
+        }
+    });
+}
+
+// 2. BARRA — RxPower atual por ONU
+function renderONURxPowerChart(onus) {
+    destroyChart('onuRxPower');
+    const canvas = document.getElementById('chart-onu-rxpower');
+    if (!canvas) return;
+
+    const labels = (onus || []).map(o => o.apt?.replace('Apto ', 'Ap.') || `ONU ${o.id}`);
+    const data   = (onus || []).map(o => o.current ?? o.rxPower ?? -20);
+    const colors = data.map(v =>
+        v < -27 ? 'rgba(220,38,38,0.8)'  :   // crítico
+        v < -24 ? 'rgba(245,158,11,0.8)' :   // aviso
+                  'rgba(16,185,129,0.8)'      // normal
+    );
+    const borders = data.map(v =>
+        v < -27 ? '#dc2626' : v < -24 ? '#f59e0b' : '#10b981'
+    );
+
+    ChartRegistry['onuRxPower'] = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'RxPower (dBm)',
+                data,
+                backgroundColor: colors,
+                borderColor:     borders,
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            ...chartDefaults,
+            plugins: {
+                ...chartDefaults.plugins,
+                tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` RxPower: ${ctx.parsed.y} dBm` } }
+            },
+            scales: {
+                ...chartDefaults.scales,
+                y: {
+                    ...chartDefaults.scales.y,
+                    reverse: true,
+                    min: -31,
+                    max: -14,
+                    title: { display: true, text: 'dBm', color: '#64748b' },
+                }
+            }
+        }
+    });
+}
+
+// 3. LINHA — Latência média ao longo do tempo
+function renderLatencyGPONChart(history) {
+    destroyChart('latencyGpon');
+    const canvas = document.getElementById('chart-latency-gpon');
+    if (!canvas) return;
+
+    const count    = history?.latency?.length || 120;
+    const interval = (history?.intervalSeconds || 5) * 1000;
+    const now      = Date.now();
+    const labels   = Array.from({length: count}, (_, i) => {
+        const t = new Date(now - (count - 1 - i) * interval);
+        return t.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    });
+
+    const data = history?.latency || Array.from({length:120}, () => 10 + Math.random() * 8);
+
+    ChartRegistry['latencyGpon'] = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Latência Média (ms)',
+                data,
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245,158,11,0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+            }]
+        },
+        options: {
+            ...chartDefaults,
+            plugins: { ...chartDefaults.plugins, tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` Latência: ${ctx.parsed.y} ms` } } },
+            scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, title: { display:true, text:'ms', color:'#64748b' } } }
+        }
+    });
+}
+
+// Push de dados GPON em tempo real
+function pushGPONChartPoints(liveData) {
+    const label = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+    // Sinal óptico médio
+    const sigChart = ChartRegistry['opticalSignal'];
+    if (sigChart && liveData.avgRxPower) {
+        sigChart.data.labels.push(label);
+        sigChart.data.datasets[0].data.push(parseFloat(liveData.avgRxPower));
+        if (sigChart.data.labels.length > 30) { sigChart.data.labels.shift(); sigChart.data.datasets[0].data.shift(); }
+        sigChart.update('none');
+    }
+
+    // Latência
+    const latChart = ChartRegistry['latencyGpon'];
+    if (latChart && liveData.avgLatency) {
+        latChart.data.labels.push(label);
+        latChart.data.datasets[0].data.push(parseFloat(liveData.avgLatency));
+        if (latChart.data.labels.length > 30) { latChart.data.labels.shift(); latChart.data.datasets[0].data.shift(); }
+        latChart.update('none');
+    }
+}
+
+// Inicializar todos os gráficos do dashboard GPON
+async function initDashboardCharts(range) {
+    // Gráfico de tráfego (existente)
+    let history = null;
+    if (typeof API !== 'undefined') {
+        try { history = await API.getHistory(); } catch(e) {}
+    }
+    if (history && history.traffic && history.traffic.length > 0) {
+        renderTrafficChartFromHistory(history);
+    } else {
+        renderTrafficChart(range || '24h');
+    }
+
+    // Gráficos GPON — inicializar com histórico real
+    renderOpticalSignalChart(history);
+    renderLatencyGPONChart(history);
+
+    // Gráfico de barras de RxPower por ONU
+    if (typeof API !== 'undefined') {
+        try {
+            const hist = await API.getHistory();
+            if (hist?.onuRxHistory) renderONURxPowerChart(hist.onuRxHistory);
+        } catch(e) {}
+    }
+}

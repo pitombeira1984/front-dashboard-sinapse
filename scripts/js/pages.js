@@ -1,3 +1,38 @@
+// ── Renderizar tabela de ONUs ─────────────────────────────────────────────────
+function renderONURows(onus) {
+    if (!onus || !onus.length) return `<tr><td colspan="9" style="text-align:center;color:#64748b;padding:2rem;">Nenhuma ONU encontrada.</td></tr>`;
+    return onus.map(o => {
+        const rxColor = o.rxPower < -27 ? 'var(--danger-color)' : o.rxPower < -24 ? 'var(--warning-color)' : 'var(--success-color)';
+        const statusBg = o.status === 'online' ? 'rgba(16,185,129,0.1)' : 'rgba(220,38,38,0.1)';
+        const statusColor = o.status === 'online' ? 'var(--success-color)' : 'var(--danger-color)';
+        return `
+        <tr>
+            <td>
+                <div style="font-weight:600;">${o.apt}</div>
+                <div style="font-size:0.8rem;color:#94a3b8;">${o.client}</div>
+                <div style="font-size:0.75rem;color:#64748b;">${o.model}</div>
+            </td>
+            <td>
+                <div style="font-size:0.875rem;">${o.ip}</div>
+                <div style="font-size:0.7rem;color:#64748b;font-family:monospace;">${o.serial}</div>
+            </td>
+            <td style="font-family:monospace;font-size:0.875rem;">${o.port}</td>
+            <td>
+                <span style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.25rem 0.75rem;background:${statusBg};color:${statusColor};border-radius:9999px;font-size:0.8rem;font-weight:600;">
+                    <i class="fas fa-circle" style="font-size:0.5rem;"></i>
+                    ${o.status === 'online' ? 'Online' : 'Offline'}
+                    ${o.degraded ? '<i class="fas fa-exclamation-triangle" style="color:var(--warning-color);font-size:0.7rem;" title="Sinal degradado"></i>' : ''}
+                </span>
+            </td>
+            <td style="font-weight:600;color:${rxColor};">${o.status === 'online' ? o.rxPower + ' dBm' : '--'}</td>
+            <td style="color:#94a3b8;">${o.status === 'online' ? o.txPower + ' dBm' : '--'}</td>
+            <td style="color:${o.latency > 50 ? 'var(--warning-color)' : '#e2e8f0'};">${o.status === 'online' ? o.latency + ' ms' : '--'}</td>
+            <td style="font-size:0.875rem;color:#94a3b8;">${o.distance}</td>
+            <td style="font-size:0.8rem;color:#94a3b8;">${o.status === 'online' ? o.uptime : '<span style="color:var(--danger-color);">Offline desde ' + o.lastSeen + '</span>'}</td>
+        </tr>`;
+    }).join('');
+}
+
 // ===== CONTEÚDO DAS PÁGINAS =====
 
 // ---------- HELPERS DE RENDERIZAÇÃO ----------
@@ -169,26 +204,42 @@ function getDashboardContent() {
 
         <section class="kpi-grid">
             <div class="kpi-card">
-                <div class="kpi-header"><div class="kpi-title">Disponibilidade</div><i class="fas fa-signal kpi-icon"></i></div>
-                <div class="kpi-value" id="availability">${m.availability}%</div>
-                <div class="kpi-trend trend-up"><i class="fas fa-arrow-up"></i> <span>+0.12% (24h)</span></div>
+                <div class="kpi-header"><div class="kpi-title">ONUs Ativas</div><i class="fas fa-wifi kpi-icon"></i></div>
+                <div class="kpi-value" id="onus" style="font-size:1.75rem;">--/8</div>
+                <div class="kpi-trend" id="onus-trend">
+                    <i class="fas fa-spinner fa-spin" style="font-size:0.75rem;"></i>
+                    <span>Carregando...</span>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-header"><div class="kpi-title">Sinal Médio RxPower</div><i class="fas fa-satellite-dish kpi-icon"></i></div>
+                <div class="kpi-value" id="avg-rxpower" style="font-size:1.5rem;">-- dBm</div>
+                <div class="kpi-trend">
+                    <span style="font-size:0.75rem;color:#64748b;">Limiar crítico: -27 dBm</span>
+                </div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-header"><div class="kpi-title">Latência Média</div><i class="fas fa-bolt kpi-icon"></i></div>
-                <div class="kpi-value" id="latency">${m.latency}<span style="font-size:1rem;">ms</span></div>
-                <div class="kpi-trend trend-down"><i class="fas fa-arrow-down"></i> <span>-2.1ms (24h)</span></div>
+                <div class="kpi-value" id="latency">--<span style="font-size:1rem;">ms</span></div>
+                <div class="kpi-trend" id="latency-trend">
+                    <i class="fas fa-minus"></i> <span>Calculando...</span>
+                </div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-header"><div class="kpi-title">ONUs Online</div><i class="fas fa-wifi kpi-icon"></i></div>
-                <div class="kpi-value" id="onus">${m.onus.toLocaleString()}</div>
-                <div class="kpi-trend"><i class="fas fa-minus"></i> <span>Estável (24h)</span></div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-header"><div class="kpi-title">CPU Orange Pi</div><i class="fas fa-microchip kpi-icon"></i></div>
-                <div class="kpi-value" id="cpu-usage">${m.cpu_usage}%</div>
+                <div class="kpi-header"><div class="kpi-title">Disponibilidade</div><i class="fas fa-signal kpi-icon"></i></div>
+                <div class="kpi-value" id="availability">--%</div>
                 <div class="kpi-trend">
                     <div style="width:100%;height:6px;background:#334155;border-radius:3px;margin-top:0.5rem;">
-                        <div id="cpu-bar" style="width:${m.cpu_usage}%;height:100%;background:var(--success-color);border-radius:3px;transition:width 0.4s;"></div>
+                        <div id="avail-bar" style="width:0%;height:100%;background:var(--success-color);border-radius:3px;transition:width 0.6s;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-header"><div class="kpi-title">CPU OLT</div><i class="fas fa-microchip kpi-icon"></i></div>
+                <div class="kpi-value" id="cpu-usage">--%</div>
+                <div class="kpi-trend">
+                    <div style="width:100%;height:6px;background:#334155;border-radius:3px;margin-top:0.5rem;">
+                        <div id="cpu-bar" style="width:0%;height:100%;background:var(--success-color);border-radius:3px;transition:width 0.4s;"></div>
                     </div>
                 </div>
             </div>
@@ -208,13 +259,31 @@ function getDashboardContent() {
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
             <div class="card" style="margin-bottom:0;">
-                <div class="section-header"><h2 class="section-title">Disponibilidade (14 dias)</h2></div>
-                <div style="height:220px;position:relative;"><canvas id="chart-availability"></canvas></div>
+                <div class="section-header">
+                    <h2 class="section-title">Sinal Óptico Médio</h2>
+                    <span style="font-size:0.75rem;color:#64748b;">
+                        <span style="color:var(--warning-color);">━━</span> -24 dBm &nbsp;
+                        <span style="color:var(--danger-color);">━━</span> -27 dBm
+                    </span>
+                </div>
+                <div style="height:220px;position:relative;"><canvas id="chart-optical-signal"></canvas></div>
             </div>
             <div class="card" style="margin-bottom:0;">
-                <div class="section-header"><h2 class="section-title">Latência (24h)</h2></div>
-                <div style="height:220px;position:relative;"><canvas id="chart-latency"></canvas></div>
+                <div class="section-header"><h2 class="section-title">Latência Média das ONUs</h2></div>
+                <div style="height:220px;position:relative;"><canvas id="chart-latency-gpon"></canvas></div>
             </div>
+        </div>
+
+        <div class="card">
+            <div class="section-header">
+                <h2 class="section-title">RxPower por ONU</h2>
+                <div style="display:flex;gap:1rem;font-size:0.8rem;">
+                    <span><i class="fas fa-circle" style="color:var(--success-color);"></i> Normal (> -24 dBm)</span>
+                    <span><i class="fas fa-circle" style="color:var(--warning-color);"></i> Aviso (-24 a -27 dBm)</span>
+                    <span><i class="fas fa-circle" style="color:var(--danger-color);"></i> Crítico (< -27 dBm)</span>
+                </div>
+            </div>
+            <div style="height:220px;position:relative;"><canvas id="chart-onu-rxpower"></canvas></div>
         </div>
 
         <div class="card">

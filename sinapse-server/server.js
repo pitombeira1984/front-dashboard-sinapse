@@ -21,7 +21,13 @@
 
 const express      = require('express');
 const cors         = require('cors');
-const { getSnapshot, getHistory, OIDs } = require('./mock-engine');
+const { getSnapshot, getHistory, getONUs, GPON_TOPOLOGY, OIDs,
+        getDevices, addDevice, updateDevice, removeDevice,
+        getAlerts, resolveAlert, ignoreAlert, addAlert,
+        getRules, addRule, updateRule, toggleRule, removeRule,
+        getAppHistory, addHistory,
+        getBackups, createBackup, restoreBackup, removeBackup,
+        getSettings, saveSettings } = require('./mock-engine');
 const traps = require('./trap-engine');
 
 const app  = express();
@@ -121,6 +127,12 @@ app.get('/api/metrics/live', (_req, res) => {
             wanInRate:   snap.interfaces[0]?.inRate  || 0,
             wanOutRate:  snap.interfaces[0]?.outRate || 0,
             wifiClients: snap.wifi.band24.clients + snap.wifi.band5.clients,
+            // GPON KPIs
+            onusOnline:   snap.gpon?.onusOnline  ?? 0,
+            onusTotal:    snap.gpon?.onusTotal   ?? 8,
+            avgRxPower:   snap.gpon?.avgRxPower  ?? 0,
+            avgLatency:   snap.gpon?.avgLatency  ?? 0,
+            availability: snap.gpon?.availability ?? 100,
             uptime:      snap.device.uptime,
             anomaly:     snap.anomaly,
         }
@@ -235,6 +247,51 @@ app.put('/api/traps/acknowledge-all', (_req, res) => {
     res.json({ ok: true, message: 'Todos os traps reconhecidos' });
 });
 
+
+// ── Topografia GPON ───────────────────────────────────────────────────────────
+app.get('/api/topology',   (_req, res) => { send(res, { data: getCachedSnapshot().topology }); });
+app.get('/api/onus',       (_req, res) => { send(res, { data: getONUs() }); });
+app.get('/api/onus/:id',   (req,  res) => {
+    const onus = getONUs();
+    const onu  = onus.find(o => o.id === parseInt(req.params.id));
+    if (!onu) return res.status(404).json({ ok:false, error:'ONU não encontrada' });
+    send(res, { data: onu });
+});
+app.get('/api/gpon/kpis',  (_req, res) => { send(res, { data: getCachedSnapshot().gpon }); });
+
+// ── CRUD Dispositivos ─────────────────────────────────────────────────────────
+app.get('/api/devices',       (_,res)   => send(res, { data: getDevices() }));
+app.post('/api/devices',      (req,res) => { if(!req.body.name||!req.body.ip) return res.status(400).json({ok:false,error:'name e ip obrigatórios'}); send(res,{data:addDevice(req.body)}); });
+app.put('/api/devices/:id',   (req,res) => { const u=updateDevice(parseInt(req.params.id),req.body); if(!u) return res.status(404).json({ok:false,error:'Não encontrado'}); send(res,{data:u}); });
+app.delete('/api/devices/:id',(req,res) => { removeDevice(parseInt(req.params.id)); send(res,{message:'Removido'}); });
+
+// ── Alertas CRUD ──────────────────────────────────────────────────────────────
+app.get('/api/alerts/all',    (_,res)   => send(res, { data: getAlerts() }));
+app.post('/api/alerts/add',   (req,res) => send(res, { data: addAlert(req.body) }));
+app.put('/api/alerts/:id/resolve', (req,res) => { resolveAlert(parseInt(req.params.id)); send(res,{message:'Resolvido'}); });
+app.delete('/api/alerts/:id', (req,res) => { ignoreAlert(parseInt(req.params.id)); send(res,{message:'Removido'}); });
+
+// ── Regras CRUD ───────────────────────────────────────────────────────────────
+app.get('/api/rules',              (_,res)   => send(res,{data:getRules()}));
+app.post('/api/rules',             (req,res) => send(res,{data:addRule(req.body)}));
+app.put('/api/rules/:id',          (req,res) => { const u=updateRule(parseInt(req.params.id),req.body); if(!u) return res.status(404).json({ok:false,error:'Não encontrada'}); send(res,{data:u}); });
+app.put('/api/rules/:id/toggle',   (req,res) => send(res,{data:toggleRule(parseInt(req.params.id))}));
+app.delete('/api/rules/:id',       (req,res) => { removeRule(parseInt(req.params.id)); send(res,{message:'Removida'}); });
+
+// ── Histórico ─────────────────────────────────────────────────────────────────
+app.get('/api/history',   (_,res)   => send(res,{data:getAppHistory()}));
+app.post('/api/history',  (req,res) => send(res,{data:addHistory(req.body)}));
+
+// ── Backups ───────────────────────────────────────────────────────────────────
+app.get('/api/backups',               (_,res)   => send(res,{data:getBackups()}));
+app.post('/api/backups',              (_,res)   => send(res,{data:createBackup()}));
+app.post('/api/backups/:id/restore',  (req,res) => { const r=restoreBackup(parseInt(req.params.id)); if(!r) return res.status(404).json({ok:false,error:'Não encontrado'}); send(res,{message:'Restaurado'}); });
+app.delete('/api/backups/:id',        (req,res) => { removeBackup(parseInt(req.params.id)); send(res,{message:'Removido'}); });
+
+// ── Configurações ─────────────────────────────────────────────────────────────
+app.get('/api/settings', (_,res)   => send(res,{data:getSettings()}));
+app.put('/api/settings', (req,res) => send(res,{data:saveSettings(req.body)}));
+
 // ── 404 ────────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
     res.status(404).json({
@@ -257,6 +314,11 @@ app.use((req, res) => {
             'GET /api/traps/types',
             'PUT /api/traps/acknowledge',
             'PUT /api/traps/acknowledge-all',
+            'GET /api/topology',
+            'GET /api/onus',
+            'GET /api/gpon/kpis',
+            'GET /api/devices  GET /api/rules  GET /api/history',
+            'GET /api/backups  GET /api/settings',
         ]
     });
 });
@@ -272,7 +334,7 @@ app.listen(PORT, () => {
     console.log('╠══════════════════════════════════════════════════╣');
     console.log(`║  Rodando em:  http://localhost:${PORT}               ║`);
     console.log('║  Modo:        Mock (dados simulados)             ║');
-    console.log('║  Dispositivo: Huawei HG8145X6 (ONU Wi-Fi 6)     ║');
+    console.log('║  Topografia:  OLT MA5800-X2 → CTO → 8 ONUs      ║');
     console.log('╠══════════════════════════════════════════════════╣');
     console.log('║  Endpoints disponíveis:                          ║');
     console.log('║  /api/status          → Status do servidor       ║');
