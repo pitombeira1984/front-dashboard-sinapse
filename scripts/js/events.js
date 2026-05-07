@@ -37,8 +37,18 @@ function initCommonEvents() {
 
 // ===== DASHBOARD =====
 function initDashboardEvents() {
-    // FIX 1: Inicializar gráficos vazios — dados chegam pelo polling
-    setTimeout(() => initDashboardCharts(), 50);
+    // Gráficos de linha inicializados ANTES do polling para garantir estado vazio
+    initTrafficChartEmpty();
+    initOpticalSignalChartEmpty();
+    initLatencyGPONChartEmpty();
+    // Gráfico de barras de RxPower por ONU carregado de forma assíncrona
+    (async () => {
+        try {
+            const port = (typeof AppState !== 'undefined') ? AppState.currentGponPort : null;
+            const onus = await API.getONUs(port);
+            if (onus && onus.length) renderONURxPowerChart(onus);
+        } catch(e) {}
+    })();
 
     // Polling principal: KPIs + gráficos de linha em tempo real
     API.startPolling(data => {
@@ -108,17 +118,46 @@ function initDashboardEvents() {
                 select.addEventListener('change', async function() {
                     AppState.currentGponPort = this.value;
 
-                    // Re-inicializar gráfico de barras com ONUs da nova porta
-                    const onus = await API.getONUs(AppState.currentGponPort);
+                    // Resetar gráficos de linha GPON para a nova porta
+                    initOpticalSignalChartEmpty();
+                    initLatencyGPONChartEmpty();
+
+                    // Buscar dados em paralelo para a nova porta
+                    const [liveData, onus, devices] = await Promise.all([
+                        API.getLive(AppState.currentGponPort),
+                        API.getONUs(AppState.currentGponPort),
+                        API.getDevices(),
+                    ]);
+
+                    // Atualizar KPIs e gráficos com dados da nova porta
+                    if (liveData) {
+                        applyLiveData(liveData);
+                        if (typeof pushGPONChartPoints === 'function') pushGPONChartPoints(liveData);
+                        // Barra de disponibilidade
+                        const availBar = document.getElementById('avail-bar');
+                        if (availBar && liveData.availability !== undefined) {
+                            availBar.style.width = `${Math.min(liveData.availability, 100)}%`;
+                            availBar.style.backgroundColor = liveData.availability >= 99 ? 'var(--success-color)' : liveData.availability >= 90 ? 'var(--warning-color)' : 'var(--danger-color)';
+                        }
+                        // Trend de ONUs
+                        const trend = document.getElementById('onus-trend');
+                        if (trend) {
+                            const offline = (liveData.onusTotal ?? 0) - (liveData.onusOnline ?? 0);
+                            trend.innerHTML = offline > 0
+                                ? `<i class="fas fa-exclamation-triangle" style="color:var(--danger-color);"></i> <span style="color:var(--danger-color);">${offline} offline</span>`
+                                : `<i class="fas fa-check-circle" style="color:var(--success-color);"></i> <span>Todas online</span>`;
+                        }
+                    }
+
+                    // Atualizar gráfico de barras RxPower para nova porta
                     if (onus) renderONURxPowerChart(onus);
 
                     // Atualizar cards de dispositivos para nova porta
-                    const devices = await API.getDevices();
-                    const grid    = document.getElementById('devices-grid-dashboard');
+                    const grid = document.getElementById('devices-grid-dashboard');
                     if (grid && devices) {
-                        const olt  = devices.filter(d => d.type === 'OLT');
+                        const olt       = devices.filter(d => d.type === 'OLT');
                         const port_onus = devices.filter(d => d.type === 'ONU' && d.gponPort === AppState.currentGponPort).slice(0, 3);
-                        grid.innerHTML = renderDeviceCards([...olt, ...port_onus]);
+                        grid.innerHTML  = renderDeviceCards([...olt, ...port_onus]);
                     }
 
                     // Feedback visual

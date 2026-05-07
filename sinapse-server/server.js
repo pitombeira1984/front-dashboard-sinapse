@@ -112,28 +112,54 @@ app.get('/api/device/history', (_req, res) => {
 });
 
 // Métricas mínimas para polling rápido (frontend atualiza a cada 5s)
-app.get('/api/metrics/live', (_req, res) => {
+// Aceita ?port=0/1/0 para retornar KPIs filtrados por porta GPON
+app.get('/api/metrics/live', (req, res) => {
+    const port = req.query.port || null;
     const snap = getCachedSnapshot();
+
+    let onusOnline, onusTotal, avgRxPower, avgLatency, availability;
+
+    if (port) {
+        const portONUs   = getONUs(port);
+        const onlineONUs = portONUs.filter(o => o.status === 'online');
+        onusOnline  = onlineONUs.length;
+        onusTotal   = portONUs.length;
+        avgRxPower  = onlineONUs.length
+            ? parseFloat((onlineONUs.reduce((s, o) => s + o.rxPower,  0) / onlineONUs.length).toFixed(2))
+            : null;
+        avgLatency  = onlineONUs.length
+            ? parseFloat((onlineONUs.reduce((s, o) => s + o.latency, 0) / onlineONUs.length).toFixed(1))
+            : null;
+        availability = onusTotal
+            ? parseFloat(((onusOnline / onusTotal) * 100).toFixed(2))
+            : 100;
+    } else {
+        onusOnline   = snap.gpon?.onusOnline  ?? 0;
+        onusTotal    = snap.gpon?.onusTotal   ?? 8;
+        avgRxPower   = snap.gpon?.avgRxPower  ?? 0;
+        avgLatency   = snap.gpon?.avgLatency  ?? 0;
+        availability = snap.gpon?.availability ?? 100;
+    }
+
     send(res, {
         data: {
-            timestamp:   snap.timestamp,
-            cpu:         snap.system.cpu,
-            memPercent:  snap.system.memPercent,
-            temperature: snap.system.temperature,
-            rxPower:     snap.optical.rxPower,
-            txPower:     snap.optical.txPower,
+            timestamp:     snap.timestamp,
+            cpu:           snap.system.cpu,
+            memPercent:    snap.system.memPercent,
+            temperature:   snap.system.temperature,
+            rxPower:       snap.optical.rxPower,
+            txPower:       snap.optical.txPower,
             opticalStatus: snap.optical.status,
-            wanInRate:   snap.interfaces[0]?.inRate  || 0,
-            wanOutRate:  snap.interfaces[0]?.outRate || 0,
-            wifiClients: snap.wifi.band24.clients + snap.wifi.band5.clients,
-            // GPON KPIs
-            onusOnline:   snap.gpon?.onusOnline  ?? 0,
-            onusTotal:    snap.gpon?.onusTotal   ?? 8,
-            avgRxPower:   snap.gpon?.avgRxPower  ?? 0,
-            avgLatency:   snap.gpon?.avgLatency  ?? 0,
-            availability: snap.gpon?.availability ?? 100,
-            uptime:      snap.device.uptime,
-            anomaly:     snap.anomaly,
+            wanInRate:     snap.interfaces[0]?.inRate  || 0,
+            wanOutRate:    snap.interfaces[0]?.outRate || 0,
+            wifiClients:   snap.wifi.band24.clients + snap.wifi.band5.clients,
+            onusOnline,
+            onusTotal,
+            avgRxPower,
+            avgLatency,
+            availability,
+            uptime:        snap.device.uptime,
+            anomaly:       snap.anomaly,
         }
     });
 });

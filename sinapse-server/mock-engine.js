@@ -272,13 +272,25 @@ function getGponPorts() {
     const byPort = {};
     onuState.forEach(o => {
         const p = o.gponPort;
-        if (!byPort[p]) byPort[p] = { online:0, total:0, rxSum:0, rxCount:0 };
+        if (!byPort[p]) byPort[p] = { online:0, total:0, rxSum:0, rxCount:0, latSum:0, latCount:0 };
         byPort[p].total++;
-        if (o.status === 'online') { byPort[p].online++; byPort[p].rxSum += o.rxPower; byPort[p].rxCount++; }
+        if (o.status === 'online') {
+            byPort[p].online++;
+            byPort[p].rxSum  += o.rxPower;
+            byPort[p].rxCount++;
+            byPort[p].latSum  += o.latency;
+            byPort[p].latCount++;
+        }
     });
     return GPON_PORTS.map(p => {
-        const s = byPort[p.id] || { online:0, total:0, rxSum:0, rxCount:0 };
-        return { ...p, onusOnline:s.online, onusTotal:s.total, avgRxPower:s.rxCount ? parseFloat((s.rxSum/s.rxCount).toFixed(2)) : null };
+        const s = byPort[p.id] || { online:0, total:0, rxSum:0, rxCount:0, latSum:0, latCount:0 };
+        return {
+            ...p,
+            onusOnline:  s.online,
+            onusTotal:   s.total,
+            avgRxPower:  s.rxCount  ? parseFloat((s.rxSum  / s.rxCount).toFixed(2)) : null,
+            avgLatency:  s.latCount ? parseFloat((s.latSum / s.latCount).toFixed(1)) : null,
+        };
     });
 }
 

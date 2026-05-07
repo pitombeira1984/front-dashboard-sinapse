@@ -45,7 +45,7 @@ const API = {
     async getWifi()       { return this._fetch('/api/device/wifi'); },
     async getInterfaces() { return this._fetch('/api/device/interfaces'); },
     async getHistory()    { return this._fetch('/api/device/history'); },
-    async getLive()       { return this._fetch('/api/metrics/live'); },
+    async getLive(port)   { const qs = port ? `?port=${encodeURIComponent(port)}` : ''; return this._fetch(`/api/metrics/live${qs}`); },
     async getAlerts()     { return this._fetch('/api/alerts'); },
 
 
@@ -135,7 +135,8 @@ const API = {
     startPolling(callback) {
         this.stopPolling();
         const poll = async () => {
-            const data = await this.getLive();
+            const port = (typeof AppState !== 'undefined') ? AppState.currentGponPort : null;
+            const data = await this.getLive(port);
             if (data) callback(data);
         };
         poll(); // imediato
@@ -237,14 +238,23 @@ function applyLiveData(data) {
 
     // KPI: Sinal Médio RxPower
     const rxEl = document.getElementById('avg-rxpower');
-    if (rxEl && data.avgRxPower) {
-        rxEl.textContent = `${data.avgRxPower} dBm`;
-        rxEl.style.color = data.avgRxPower < -25 ? 'var(--danger-color)' : data.avgRxPower < -22 ? 'var(--warning-color)' : 'var(--success-color)';
+    if (rxEl) {
+        if (data.avgRxPower != null && data.avgRxPower !== 0) {
+            rxEl.textContent = `${data.avgRxPower} dBm`;
+            rxEl.style.color = data.avgRxPower < -25 ? 'var(--danger-color)' : data.avgRxPower < -22 ? 'var(--warning-color)' : 'var(--success-color)';
+        } else {
+            rxEl.textContent = '-- dBm';
+            rxEl.style.color = '';
+        }
     }
 
     // KPI: Latência Média real das ONUs
-    if (setLat && data.avgLatency) {
-        setLat.innerHTML = `${data.avgLatency}<span style="font-size:1rem;">ms</span>`;
+    if (setLat) {
+        if (data.avgLatency != null && data.avgLatency !== 0) {
+            setLat.innerHTML = `${data.avgLatency}<span style="font-size:1rem;">ms</span>`;
+        } else {
+            setLat.innerHTML = `--<span style="font-size:1rem;">ms</span>`;
+        }
     }
 
     // KPI: Disponibilidade real
