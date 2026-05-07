@@ -98,79 +98,41 @@ const MAX_LIVE_POINTS = 30;
 function pushChartPoint(liveData) {
     const label = nowLabel();
 
-    // — Gráfico de Tráfego —
+    // — Gráfico de Tráfego — (janela deslizante, sempre atualiza independente do range)
     const trafficChart = ChartRegistry['traffic'];
-    if (trafficChart && AppState.currentTimeRange === '24h') {
+    if (trafficChart) {
         trafficChart.data.labels.push(label);
-        trafficChart.data.datasets[0].data.push(parseFloat(liveData.wanInRate.toFixed(2)));
-        trafficChart.data.datasets[1].data.push(parseFloat(liveData.wanOutRate.toFixed(2)));
-        // Manter janela deslizante
+        trafficChart.data.datasets[0].data.push(parseFloat((liveData.wanInRate  || 0).toFixed(2)));
+        trafficChart.data.datasets[1].data.push(parseFloat((liveData.wanOutRate || 0).toFixed(2)));
         if (trafficChart.data.labels.length > MAX_LIVE_POINTS) {
             trafficChart.data.labels.shift();
             trafficChart.data.datasets[0].data.shift();
             trafficChart.data.datasets[1].data.shift();
         }
-        trafficChart.update('none'); // 'none' = sem animação para suavidade
-    }
-
-    // — Gráfico de Latência —
-    const latencyChart = ChartRegistry['latency'];
-    if (latencyChart) {
-        const estimatedLatency = parseFloat((5 + liveData.wanInRate * 0.01).toFixed(1));
-        latencyChart.data.labels.push(label);
-        latencyChart.data.datasets[0].data.push(estimatedLatency);
-        if (latencyChart.data.labels.length > MAX_LIVE_POINTS) {
-            latencyChart.data.labels.shift();
-            latencyChart.data.datasets[0].data.shift();
-        }
-        latencyChart.update('none');
-    }
-
-    // — Gráfico de Disponibilidade —
-    // Atualiza o último ponto do dia atual com base no status óptico
-    const availChart = ChartRegistry['availability'];
-    if (availChart) {
-        const lastIdx  = availChart.data.datasets[0].data.length - 1;
-        const newAvail = liveData.opticalStatus === 'online'
-            ? parseFloat((99.9 + Math.random() * 0.09).toFixed(3))
-            : parseFloat((97.5 + Math.random() * 1.0).toFixed(3));
-
-        availChart.data.datasets[0].data[lastIdx] = newAvail;
-
-        // Atualizar cor da barra do dia atual
-        const colors = availChart.data.datasets[0].backgroundColor;
-        const bColors = availChart.data.datasets[0].borderColor;
-        colors[lastIdx]  = newAvail >= 99.9 ? 'rgba(16,185,129,0.7)' : newAvail >= 99.0 ? 'rgba(245,158,11,0.7)' : 'rgba(220,38,38,0.7)';
-        bColors[lastIdx] = newAvail >= 99.9 ? '#10b981'               : newAvail >= 99.0 ? '#f59e0b'               : '#dc2626';
-
-        availChart.update('none');
+        trafficChart.update('none');
     }
 }
 
-// ===== INICIALIZAR COM DADOS REAIS DA API =====
-async function initDashboardCharts(range = '24h') {
-    // Tentar buscar histórico real da API
-    let history = null;
-    if (typeof API !== 'undefined' && API.connected !== false) {
-        try {
-            history = await API.getHistory();
-        } catch (e) {
-            history = null;
+// ===== INICIALIZAR GRÁFICO VAZIO — TRÁFEGO =====
+function initTrafficChartEmpty() {
+    destroyChart('traffic');
+    const canvas = document.getElementById('chart-traffic');
+    if (!canvas) return;
+    ChartRegistry['traffic'] = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                { label: 'Tráfego IN (Mbps)',  data: [], borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.12)', fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 },
+                { label: 'Tráfego OUT (Mbps)', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 }
+            ]
+        },
+        options: {
+            ...chartDefaults,
+            plugins: { ...chartDefaults.plugins, tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} Mbps` } } },
+            scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, title: { display: true, text: 'Mbps', color: '#64748b' } } }
         }
-    }
-
-    if (history && history.traffic && history.traffic.length > 0) {
-        // ── Dados reais do servidor mock ──────────────────────────────────
-        renderTrafficChartFromHistory(history);
-        renderLatencyChartFromHistory(history);
-    } else {
-        // ── Fallback: dados simulados locais ──────────────────────────────
-        renderTrafficChart(range);
-        renderLatencyChart();
-    }
-
-    // Disponibilidade sempre usa dados históricos locais (não há histórico na API)
-    renderAvailabilityChart();
+    });
 }
 
 // ===== GRÁFICO DE TRÁFEGO COM DADOS REAIS =====
@@ -244,7 +206,7 @@ function renderLatencyChartFromHistory(history) {
     const canvas = document.getElementById('chart-latency');
     if (!canvas) return;
 
-    const count    = history.traffic.length;
+    const count    = (history.latency || history.traffic).length;
     const interval = (history.intervalSeconds || 5) * 1000;
     const now      = Date.now();
     const labels   = Array.from({ length: count }, (_, i) => {
@@ -252,10 +214,7 @@ function renderLatencyChartFromHistory(history) {
         return t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     });
 
-    // Latência estimada a partir do tráfego IN
-    const data = history.traffic.map(p =>
-        parseFloat((5 + (p.in || 0) * 0.01).toFixed(1))
-    );
+    const data = (history.latency || []).map(p => parseFloat(p.toFixed(1)));
 
     ChartRegistry['latency'] = new Chart(canvas, {
         type: 'line',
@@ -622,28 +581,74 @@ function pushGPONChartPoints(liveData) {
     }
 }
 
-// Inicializar todos os gráficos do dashboard GPON
-async function initDashboardCharts(range) {
-    // Gráfico de tráfego (existente)
-    let history = null;
-    if (typeof API !== 'undefined') {
-        try { history = await API.getHistory(); } catch(e) {}
-    }
-    if (history && history.traffic && history.traffic.length > 0) {
-        renderTrafficChartFromHistory(history);
-    } else {
-        renderTrafficChart(range || '24h');
-    }
+// ===== INICIALIZAR GRÁFICO VAZIO — SINAL ÓPTICO =====
+function initOpticalSignalChartEmpty() {
+    destroyChart('opticalSignal');
+    const canvas = document.getElementById('chart-optical-signal');
+    if (!canvas) return;
+    ChartRegistry['opticalSignal'] = new Chart(canvas, {
+        type: 'line',
+        data: { labels: [], datasets: [{ label: 'RxPower Médio (dBm)', data: [], borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.1)', fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 }] },
+        options: {
+            ...chartDefaults,
+            plugins: { ...chartDefaults.plugins, tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` Sinal: ${ctx.parsed.y} dBm` } } },
+            scales: {
+                ...chartDefaults.scales,
+                y: {
+                    ...chartDefaults.scales.y,
+                    reverse: true,
+                    title: { display: true, text: 'dBm', color: '#64748b' },
+                    afterDraw(chart) {
+                        const ctx2 = chart.ctx;
+                        const yAxis = chart.scales.y;
+                        [-24, -27].forEach((val, i) => {
+                            const y = yAxis.getPixelForValue(val);
+                            ctx2.save();
+                            ctx2.strokeStyle = i === 0 ? 'rgba(245,158,11,0.5)' : 'rgba(220,38,38,0.5)';
+                            ctx2.lineWidth   = 1;
+                            ctx2.setLineDash([4, 4]);
+                            ctx2.beginPath();
+                            ctx2.moveTo(chart.chartArea.left, y);
+                            ctx2.lineTo(chart.chartArea.right, y);
+                            ctx2.stroke();
+                            ctx2.restore();
+                        });
+                    }
+                }
+            }
+        }
+    });
+}
 
-    // Gráficos GPON — inicializar com histórico real
-    renderOpticalSignalChart(history);
-    renderLatencyGPONChart(history);
+// ===== INICIALIZAR GRÁFICO VAZIO — LATÊNCIA GPON =====
+function initLatencyGPONChartEmpty() {
+    destroyChart('latencyGpon');
+    const canvas = document.getElementById('chart-latency-gpon');
+    if (!canvas) return;
+    ChartRegistry['latencyGpon'] = new Chart(canvas, {
+        type: 'line',
+        data: { labels: [], datasets: [{ label: 'Latência Média (ms)', data: [], borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 }] },
+        options: {
+            ...chartDefaults,
+            plugins: { ...chartDefaults.plugins, tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` Latência: ${ctx.parsed.y} ms` } } },
+            scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, title: { display: true, text: 'ms', color: '#64748b' } } }
+        }
+    });
+}
 
-    // Gráfico de barras de RxPower por ONU
+// ===== INICIALIZAR TODOS OS GRÁFICOS DO DASHBOARD (VAZIOS) =====
+async function initDashboardCharts() {
+    // Todos os gráficos de série temporal iniciam vazios — dados chegam pelo polling
+    initTrafficChartEmpty();
+    initOpticalSignalChartEmpty();
+    initLatencyGPONChartEmpty();
+
+    // Gráfico de barras de RxPower por ONU — carrega estado atual das ONUs
     if (typeof API !== 'undefined') {
         try {
-            const hist = await API.getHistory();
-            if (hist?.onuRxHistory) renderONURxPowerChart(hist.onuRxHistory);
+            const port = (typeof AppState !== 'undefined') ? AppState.currentGponPort : null;
+            const onus = await API.getONUs(port);
+            if (onus && onus.length) renderONURxPowerChart(onus);
         } catch(e) {}
     }
 }

@@ -52,7 +52,10 @@ function renderAlertItems(alerts) {
 }
 
 function renderDeviceCards(devices) {
-    return devices.map(d => `
+    if (!devices || !devices.length) return `<div style="color:#64748b;padding:1.5rem;text-align:center;grid-column:1/-1;">Nenhum dispositivo encontrado.</div>`;
+    return devices.map(d => {
+        const rxColor = d.rxPower !== undefined ? (d.rxPower < -27 ? 'var(--danger-color)' : d.rxPower < -24 ? 'var(--warning-color)' : 'var(--success-color)') : '#e2e8f0';
+        return `
         <div class="device-card">
             <div class="device-header">
                 <div class="device-name">${d.name}</div>
@@ -61,21 +64,27 @@ function renderDeviceCards(devices) {
                     <span>${d.status === 'online' ? 'Online' : 'Offline'}</span>
                 </div>
             </div>
-            <div style="color:#94a3b8;font-size:0.875rem;">IP: ${d.ip} • ${d.type}</div>
+            <div style="color:#94a3b8;font-size:0.875rem;">IP: ${d.ip} • ${d.type}${d.port ? ' • ' + d.port : ''}</div>
             <div class="device-metrics">
                 ${d.type === 'OLT' ? `
-                    <div class="metric"><div class="metric-label">CPU</div><div class="metric-value">${d.cpu}%</div></div>
-                    <div class="metric"><div class="metric-label">Memória</div><div class="metric-value">${d.memory}%</div></div>
-                    <div class="metric"><div class="metric-label">Temperatura</div><div class="metric-value">${d.temperature}°C</div></div>
-                    <div class="metric"><div class="metric-label">ONUs Ativas</div><div class="metric-value">${d.onus_active}/${d.onus_total}</div></div>
+                    <div class="metric"><div class="metric-label">CPU</div><div class="metric-value">${d.cpu ?? '--'}%</div></div>
+                    <div class="metric"><div class="metric-label">Memória</div><div class="metric-value">${d.memory ?? '--'}%</div></div>
+                    <div class="metric"><div class="metric-label">Temp.</div><div class="metric-value">${d.temperature ?? '--'}°C</div></div>
+                    <div class="metric"><div class="metric-label">ONUs Ativas</div><div class="metric-value">${d.onus_active ?? '--'}/${d.onus_total ?? '--'}</div></div>
+                ` : d.type === 'ONU' ? `
+                    <div class="metric"><div class="metric-label">RxPower</div><div class="metric-value" style="color:${rxColor};">${d.status === 'online' ? (d.rxPower ?? '--') + ' dBm' : '--'}</div></div>
+                    <div class="metric"><div class="metric-label">Latência</div><div class="metric-value">${d.status === 'online' ? (d.latency ?? '--') + ' ms' : '--'}</div></div>
+                    <div class="metric"><div class="metric-label">Distância</div><div class="metric-value">${d.distance ?? '--'}</div></div>
+                    <div class="metric"><div class="metric-label">Cliente</div><div class="metric-value" style="font-size:0.75rem;">${d.client ?? '--'}</div></div>
                 ` : d.type === 'Router' ? `
-                    <div class="metric"><div class="metric-label">Tráfego IN</div><div class="metric-value">${d.traffic_in} Mbps</div></div>
-                    <div class="metric"><div class="metric-label">Tráfego OUT</div><div class="metric-value">${d.traffic_out} Mbps</div></div>
+                    <div class="metric"><div class="metric-label">Tráfego IN</div><div class="metric-value">${d.traffic_in ?? '--'} Mbps</div></div>
+                    <div class="metric"><div class="metric-label">Tráfego OUT</div><div class="metric-value">${d.traffic_out ?? '--'} Mbps</div></div>
                     <div class="metric"><div class="metric-label">Pacotes/s</div><div class="metric-value">${(d.packets || 0).toLocaleString()}</div></div>
                     <div class="metric"><div class="metric-label">Uptime</div><div class="metric-value">${d.uptime || '-'}</div></div>
                 ` : ''}
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 }
 
 function renderDeviceRows(devices) {
@@ -189,7 +198,6 @@ function renderBackupOptions(backups) {
 
 // DASHBOARD
 function getDashboardContent() {
-    const m = sampleData.metrics;
     return `
         <header class="header">
             <div class="header-title">
@@ -197,6 +205,14 @@ function getDashboardContent() {
                 <p>Monitoramento preditivo em tempo real • Edge Computing</p>
             </div>
             <div class="header-actions">
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <label style="font-size:0.8rem;color:#94a3b8;white-space:nowrap;">
+                        <i class="fas fa-network-wired" style="color:var(--primary-color);margin-right:0.35rem;"></i>Porta GPON:
+                    </label>
+                    <select id="gpon-port-selector" class="form-control" style="width:160px;font-size:0.85rem;">
+                        <option value="">Carregando...</option>
+                    </select>
+                </div>
                 <div class="time-display"><i class="far fa-clock"></i> <span id="current-time">--:--:--</span></div>
                 <button class="btn btn-primary" id="refresh-btn"><i class="fas fa-sync-alt"></i> Atualizar</button>
             </div>
@@ -250,8 +266,8 @@ function getDashboardContent() {
                 <h2 class="section-title">Tráfego de Rede</h2>
                 <div style="display:flex;gap:0.5rem;">
                     <button class="chart-range-btn btn btn-secondary" data-range="24h">24h</button>
-                    <button class="chart-range-btn btn" style="background:transparent;border:1px solid #334155;color:#94a3b8;">7d</button>
-                    <button class="chart-range-btn btn" style="background:transparent;border:1px solid #334155;color:#94a3b8;">30d</button>
+                    <button class="chart-range-btn btn" data-range="7d" style="background:transparent;border:1px solid #334155;color:#94a3b8;">7d</button>
+                    <button class="chart-range-btn btn" data-range="30d" style="background:transparent;border:1px solid #334155;color:#94a3b8;">30d</button>
                 </div>
             </div>
             <div style="height:280px;position:relative;"><canvas id="chart-traffic"></canvas></div>
@@ -299,7 +315,11 @@ function getDashboardContent() {
                 <h2 class="section-title">Dispositivos Monitorados</h2>
                 <button class="btn btn-secondary" id="add-device-btn"><i class="fas fa-plus"></i> Adicionar Dispositivo</button>
             </div>
-            <div class="devices-grid">${renderDeviceCards(DeviceStorage.getAll())}</div>
+            <div class="devices-grid" id="devices-grid-dashboard">
+                <div style="color:#64748b;padding:1.5rem;text-align:center;grid-column:1/-1;">
+                    <i class="fas fa-spinner fa-spin" style="margin-right:0.5rem;"></i> Carregando dispositivos...
+                </div>
+            </div>
         </div>
 
         <!-- SNMP Traps Summary -->

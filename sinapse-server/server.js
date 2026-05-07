@@ -21,7 +21,7 @@
 
 const express      = require('express');
 const cors         = require('cors');
-const { getSnapshot, getHistory, getONUs, GPON_TOPOLOGY, OIDs,
+const { getSnapshot, getHistory, getONUs, getGponPorts, GPON_TOPOLOGY, GPON_PORTS, OIDs,
         getDevices, addDevice, updateDevice, removeDevice,
         getAlerts, resolveAlert, ignoreAlert, addAlert,
         getRules, addRule, updateRule, toggleRule, removeRule,
@@ -58,9 +58,8 @@ function getCachedSnapshot() {
     if (!lastSnapshot || now - lastSnapshotAt > 2000) {
         lastSnapshot   = getSnapshot();
         lastSnapshotAt = now;
+        traps.evaluateTraps(lastSnapshot);
     }
-    // Avaliar Traps a cada snapshot novo
-    traps.evaluateTraps(lastSnapshot);
     return lastSnapshot;
 }
 
@@ -249,15 +248,16 @@ app.put('/api/traps/acknowledge-all', (_req, res) => {
 
 
 // ── Topografia GPON ───────────────────────────────────────────────────────────
-app.get('/api/topology',   (_req, res) => { send(res, { data: getCachedSnapshot().topology }); });
-app.get('/api/onus',       (_req, res) => { send(res, { data: getONUs() }); });
-app.get('/api/onus/:id',   (req,  res) => {
+app.get('/api/topology',    (_req, res) => { send(res, { data: getCachedSnapshot().topology }); });
+app.get('/api/onus',        (req,  res) => { send(res, { data: getONUs(req.query.port || null) }); });
+app.get('/api/onus/:id',    (req,  res) => {
     const onus = getONUs();
     const onu  = onus.find(o => o.id === parseInt(req.params.id));
     if (!onu) return res.status(404).json({ ok:false, error:'ONU não encontrada' });
     send(res, { data: onu });
 });
-app.get('/api/gpon/kpis',  (_req, res) => { send(res, { data: getCachedSnapshot().gpon }); });
+app.get('/api/gpon/ports',  (_req, res) => { send(res, { data: getGponPorts() }); });
+app.get('/api/gpon/kpis',   (_req, res) => { send(res, { data: getCachedSnapshot().gpon }); });
 
 // ── CRUD Dispositivos ─────────────────────────────────────────────────────────
 app.get('/api/devices',       (_,res)   => send(res, { data: getDevices() }));

@@ -157,7 +157,7 @@ const BackupStorage = {
         if (result) {
             // Após restauração, recarregar dados do servidor no cache local
             const [devices, alerts, rules, settings] = await Promise.all([
-                API.getDevices(), API.getAlerts(), API.getRules(), API.getSettings()
+                API.getDevices(), API.getAllAlerts(), API.getRules(), API.getSettings()
             ]);
             if (devices)  Storage.set('devices',     devices);
             if (alerts)   Storage.set('alerts',      alerts);
@@ -185,7 +185,7 @@ const SettingsStorage = {
         notifyEmail:     true,
         notifyTelegram:  true,
         notifySMS:       false,
-        email:           'pitombeira1984@gmail.com.br',
+        email:           'tiagopitombeira1984@gmail.com',
         ip:              '192.168.1.100',
         mask:            '255.255.255.0',
         gateway:         '192.168.1.1',

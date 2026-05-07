@@ -14,7 +14,7 @@ const API = {
     listeners: [],
 
     // ── Fetch base ─────────────────────────────────────────────────────────
-    async _fetch(path) {
+    async _request(path, { raw = false } = {}) {
         try {
             const res  = await fetch(`${this.BASE_URL}${path}`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -24,7 +24,7 @@ const API = {
                 this._notify('connected', null);
                 updateServerStatus(true);
             }
-            return json.data ?? json;
+            return raw ? json : (json.data ?? json);
         } catch (err) {
             if (this.connected) {
                 this.connected = false;
@@ -34,6 +34,8 @@ const API = {
             return null;
         }
     },
+    _fetch(path)    { return this._request(path); },
+    _fetchRaw(path) { return this._request(path, { raw: true }); },
 
     // ── Endpoints ──────────────────────────────────────────────────────────
     async getStatus()     { return this._fetch('/api/status'); },
@@ -49,8 +51,9 @@ const API = {
 
     // ── GPON / ONUs ────────────────────────────────────────────────────────
     async getTopology()          { return this._fetch('/api/topology'); },
-    async getONUs()              { return this._fetch('/api/onus'); },
+    async getONUs(port)          { const qs = port ? `?port=${encodeURIComponent(port)}` : ''; return this._fetch(`/api/onus${qs}`); },
     async getONU(id)             { return this._fetch(`/api/onus/${id}`); },
+    async getGponPorts()         { return this._fetch('/api/gpon/ports'); },
     async getGponKPIs()          { return this._fetch('/api/gpon/kpis'); },
 
     // ── SNMP Traps ─────────────────────────────────────────────────────────
@@ -75,18 +78,6 @@ const API = {
 
 
 
-    async _fetchRaw(path) {
-        try {
-            const res  = await fetch(`${this.BASE_URL}${path}`);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const json = await res.json();
-            if (!this.connected) { this.connected = true; this._notify('connected', null); updateServerStatus(true); }
-            return json;
-        } catch (err) {
-            if (this.connected) { this.connected = false; this._notify('disconnected', err.message); updateServerStatus(false); }
-            return null;
-        }
-    },
     async _fetchPost(path, body) {
         try {
             const res  = await fetch(`${this.BASE_URL}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -101,6 +92,44 @@ const API = {
             return await res.json();
         } catch (err) { console.warn('API PUT error:', err); return null; }
     },
+    async _fetchDelete(path) {
+        try {
+            const res = await fetch(`${this.BASE_URL}${path}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return await res.json();
+        } catch (err) { console.warn('API DELETE error:', err); return null; }
+    },
+
+    // ── CRUD Dispositivos ──────────────────────────────────────────────────
+    async getDevices()           { return this._fetch('/api/devices'); },
+    async addDevice(d)           { const r = await this._fetchPost('/api/devices', d); return r?.data ?? null; },
+    async updateDevice(id, f)    { const r = await this._fetchPut(`/api/devices/${id}`, f); return r?.data ?? null; },
+    async deleteDevice(id)       { return this._fetchDelete(`/api/devices/${id}`); },
+
+    // ── CRUD Alertas ───────────────────────────────────────────────────────
+    async getAllAlerts()          { return this._fetch('/api/alerts/all'); },
+    async addAlert(a)            { const r = await this._fetchPost('/api/alerts/add', a); return r?.data ?? null; },
+    async resolveAlert(id)       { return this._fetchPut(`/api/alerts/${id}/resolve`, {}); },
+    async deleteAlert(id)        { return this._fetchDelete(`/api/alerts/${id}`); },
+
+    // ── CRUD Regras ────────────────────────────────────────────────────────
+    async getRules()             { return this._fetch('/api/rules'); },
+    async addRule(r)             { const res = await this._fetchPost('/api/rules', r); return res?.data ?? null; },
+    async updateRule(id, f)      { const res = await this._fetchPut(`/api/rules/${id}`, f); return res?.data ?? null; },
+    async toggleRule(id)         { const res = await this._fetchPut(`/api/rules/${id}/toggle`, {}); return res?.data ?? null; },
+    async deleteRule(id)         { return this._fetchDelete(`/api/rules/${id}`); },
+
+    // ── Histórico ──────────────────────────────────────────────────────────
+    async addHistory(item)       { const r = await this._fetchPost('/api/history', item); return r?.data ?? null; },
+
+    // ── Configurações ──────────────────────────────────────────────────────
+    async getSettings()          { return this._fetch('/api/settings'); },
+    async saveSettings(s)        { const r = await this._fetchPut('/api/settings', s); return r?.data ?? null; },
+
+    // ── Backups ────────────────────────────────────────────────────────────
+    async createBackup()         { const r = await this._fetchPost('/api/backups', {}); return r?.data ?? null; },
+    async restoreBackup(id)      { return this._fetchPost(`/api/backups/${id}/restore`, {}); },
+    async deleteBackup(id)       { return this._fetchDelete(`/api/backups/${id}`); },
 
     // ── Polling ────────────────────────────────────────────────────────────
     startPolling(callback) {
@@ -192,14 +221,8 @@ function applyLiveData(data) {
         }
     }
 
-    // Latência estimada a partir do inRate (simulação realista)
-    if (setLat) {
-        const estimatedLatency = (5 + data.wanInRate * 0.01).toFixed(1);
-        setLat.innerHTML = `${estimatedLatency}<span style="font-size:1rem;">ms</span>`;
-    }
-
-    // Disponibilidade baseada no status óptico
-    if (setAvail) {
+    // Disponibilidade baseada no status óptico (fallback enquanto avgLatency/availability não chegam)
+    if (setAvail && data.availability === undefined) {
         const avail = data.opticalStatus === 'online' ? '99.97' : '98.50';
         setAvail.textContent = `${avail}%`;
     }
@@ -252,37 +275,3 @@ function applyLiveData(data) {
     }
 }
 
-// ── Enriquecer o card de dispositivo no dashboard com dados reais ─────────────
-async function enrichDeviceCards() {
-    const snap = await API.getDevice();
-    if (!snap || !snap.data) return;
-    const d = snap.data;
-
-    // Atualizar o primeiro device-card com dados reais do Home Gateway
-    const cards = document.querySelectorAll('.device-card');
-    if (!cards.length) return;
-
-    const card = cards[0];
-    const metricsEl = card.querySelector('.device-metrics');
-    if (metricsEl) {
-        metricsEl.innerHTML = `
-            <div class="metric">
-                <div class="metric-label">CPU</div>
-                <div class="metric-value">${d.system.cpu}%</div>
-            </div>
-            <div class="metric">
-                <div class="metric-label">Memória</div>
-                <div class="metric-value">${d.system.memPercent}%</div>
-            </div>
-            <div class="metric">
-                <div class="metric-label">RX Óptico</div>
-                <div class="metric-value" style="color:${d.optical.rxPower < -25 ? 'var(--danger-color)' : d.optical.rxPower < -22 ? 'var(--warning-color)' : 'var(--success-color)'}">
-                    ${d.optical.rxPower} dBm
-                </div>
-            </div>
-            <div class="metric">
-                <div class="metric-label">Clientes Wi-Fi</div>
-                <div class="metric-value">${d.wifi.band24.clients + d.wifi.band5.clients}</div>
-            </div>`;
-    }
-}
