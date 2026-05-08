@@ -1,4 +1,5 @@
 // ===== INICIALIZAÇÃO DE EVENTOS POR PÁGINA =====
+let _timeInterval = null;
 
 function initPageEvents(page) {
     initCommonEvents();
@@ -15,7 +16,8 @@ function initPageEvents(page) {
 // ===== EVENTOS COMUNS =====
 function initCommonEvents() {
     updateTime();
-    setInterval(updateTime, 1000);
+    if (_timeInterval) clearInterval(_timeInterval);
+    _timeInterval = setInterval(updateTime, 1000);
 
     const refreshBtn = document.getElementById('refresh-btn');
     if (refreshBtn) {
@@ -35,20 +37,30 @@ function initCommonEvents() {
 
 // ===== DASHBOARD =====
 function initDashboardEvents() {
-    setTimeout(() => initDashboardCharts(AppState.currentTimeRange), 50);
+    // Gráficos de linha inicializados ANTES do polling para garantir estado vazio
+    initTrafficChartEmpty();
+    initOpticalSignalChartEmpty();
+    initLatencyGPONChartEmpty();
+    // Gráfico de barras de RxPower por ONU carregado de forma assíncrona
+    (async () => {
+        try {
+            const port = (typeof AppState !== 'undefined') ? AppState.currentGponPort : null;
+            const onus = await API.getONUs(port);
+            if (onus && onus.length) renderONURxPowerChart(onus);
+        } catch(e) {}
+    })();
 
-    //LINHAS ADICIONADAS — ativar dados reais do servidor mock
+    // Polling principal: KPIs + gráficos de linha em tempo real
     API.startPolling(data => {
         applyLiveData(data);
-        // Push GPON charts em tempo real
         if (typeof pushGPONChartPoints === 'function') pushGPONChartPoints(data);
-        // Atualizar barra de disponibilidade
-        const bar = document.getElementById('cpu-bar');
-        if (bar && data.availability !== undefined) {
-            bar.style.width = `${data.availability}%`;
-            bar.style.backgroundColor = data.availability >= 99 ? 'var(--success-color)' : data.availability >= 90 ? 'var(--warning-color)' : 'var(--danger-color)';
+        // Barra de disponibilidade
+        const availBar = document.getElementById('avail-bar');
+        if (availBar && data.availability !== undefined) {
+            availBar.style.width = `${Math.min(data.availability, 100)}%`;
+            availBar.style.backgroundColor = data.availability >= 99 ? 'var(--success-color)' : data.availability >= 90 ? 'var(--warning-color)' : 'var(--danger-color)';
         }
-        // Atualizar trend de ONUs
+        // Trend de ONUs (filtra pelo port selecionado, mas usa dados totais do live)
         const trend = document.getElementById('onus-trend');
         if (trend && data.onusOnline !== undefined) {
             const offline = (data.onusTotal ?? 8) - data.onusOnline;
@@ -58,18 +70,16 @@ function initDashboardEvents() {
         }
     });
 
-    // Trap polling — atualiza badge e toast a cada novo trap
-    API.startTrapPolling(async (stats, lastTrap) => {
-        // stats já é o objeto { total, unacknowledged, critical, ... }
+    // FIX 4: Trap polling — atualiza badge, toast E o card no dashboard
+    API.startTrapPolling((stats, lastTrap) => {
         updateTrapBadge(stats);
         showTrapToast(lastTrap);
-        const trapPlaceholder = document.getElementById('trap-summary-placeholder');
-        if (trapPlaceholder) {
-            trapPlaceholder.outerHTML = renderTrapSummaryCard(stats);
-        }
+        // Atualiza o card de traps seja ele placeholder ou já renderizado
+        const trapCard = document.getElementById('trap-summary-card') || document.getElementById('trap-summary-placeholder');
+        if (trapCard) trapCard.outerHTML = renderTrapSummaryCard(stats);
     });
 
-    // Carregar card de resumo de traps no dashboard
+    // Carga inicial do card de Traps
     (async () => {
         const res   = await API.getTrapStats();
         const stats = res?.data ?? res;
@@ -79,8 +89,86 @@ function initDashboardEvents() {
             if (placeholder) placeholder.outerHTML = renderTrapSummaryCard(stats);
         }
     })();
-    enrichDeviceCards();
 
+    // FIX 3: Dispositivos Monitorados com dados reais do servidor
+    (async () => {
+        try {
+            const devices = await API.getDevices();
+            const grid    = document.getElementById('devices-grid-dashboard');
+            if (grid && devices && devices.length) {
+                const olt  = devices.filter(d => d.type === 'OLT');
+                const onus = devices.filter(d => d.type === 'ONU' && d.gponPort === AppState.currentGponPort);
+                const show = [...olt, ...onus];
+                grid.innerHTML = renderDeviceCards(show.length ? show : devices.slice(0, 4));
+            }
+        } catch(e) {}
+    })();
+
+    // FIX 2: Seletor de portas GPON
+    (async () => {
+        try {
+            const ports   = await API.getGponPorts();
+            const select  = document.getElementById('gpon-port-selector');
+            if (select && ports && ports.length) {
+                select.innerHTML = ports.map(p => {
+                    const onuInfo = p.onusTotal > 0 ? ` (${p.onusOnline}/${p.onusTotal} ONUs)` : ' (sem ONUs)';
+                    return `<option value="${p.id}" ${p.id === AppState.currentGponPort ? 'selected' : ''}>${p.name}${onuInfo}</option>`;
+                }).join('');
+
+                select.addEventListener('change', async function() {
+                    AppState.currentGponPort = this.value;
+
+                    // Resetar gráficos de linha GPON para a nova porta
+                    initOpticalSignalChartEmpty();
+                    initLatencyGPONChartEmpty();
+
+                    // Buscar dados em paralelo para a nova porta
+                    const [liveData, onus, devices] = await Promise.all([
+                        API.getLive(AppState.currentGponPort),
+                        API.getONUs(AppState.currentGponPort),
+                        API.getDevices(),
+                    ]);
+
+                    // Atualizar KPIs e gráficos com dados da nova porta
+                    if (liveData) {
+                        applyLiveData(liveData);
+                        if (typeof pushGPONChartPoints === 'function') pushGPONChartPoints(liveData);
+                        // Barra de disponibilidade
+                        const availBar = document.getElementById('avail-bar');
+                        if (availBar && liveData.availability !== undefined) {
+                            availBar.style.width = `${Math.min(liveData.availability, 100)}%`;
+                            availBar.style.backgroundColor = liveData.availability >= 99 ? 'var(--success-color)' : liveData.availability >= 90 ? 'var(--warning-color)' : 'var(--danger-color)';
+                        }
+                        // Trend de ONUs
+                        const trend = document.getElementById('onus-trend');
+                        if (trend) {
+                            const offline = (liveData.onusTotal ?? 0) - (liveData.onusOnline ?? 0);
+                            trend.innerHTML = offline > 0
+                                ? `<i class="fas fa-exclamation-triangle" style="color:var(--danger-color);"></i> <span style="color:var(--danger-color);">${offline} offline</span>`
+                                : `<i class="fas fa-check-circle" style="color:var(--success-color);"></i> <span>Todas online</span>`;
+                        }
+                    }
+
+                    // Atualizar gráfico de barras RxPower para nova porta
+                    if (onus) renderONURxPowerChart(onus);
+
+                    // Atualizar cards de dispositivos para nova porta
+                    const grid = document.getElementById('devices-grid-dashboard');
+                    if (grid && devices) {
+                        const olt       = devices.filter(d => d.type === 'OLT');
+                        const port_onus = devices.filter(d => d.type === 'ONU' && d.gponPort === AppState.currentGponPort);
+                        grid.innerHTML  = renderDeviceCards([...olt, ...port_onus]);
+                    }
+
+                    // Feedback visual
+                    const portObj = ports.find(p => p.id === AppState.currentGponPort);
+                    showToast(`Monitorando porta ${portObj?.name || AppState.currentGponPort}`, 'info');
+                });
+            }
+        } catch(e) {}
+    })();
+
+    // Botões de range do gráfico de tráfego — reinicializa vazio (dados chegam pelo polling)
     document.querySelectorAll('.chart-range-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             document.querySelectorAll('.chart-range-btn').forEach(b => {
@@ -90,9 +178,10 @@ function initDashboardEvents() {
             this.className = 'chart-range-btn btn btn-secondary';
             this.style.cssText = '';
             AppState.currentTimeRange = this.getAttribute('data-range');
-            renderTrafficChart(AppState.currentTimeRange);
-            // Re-renderizar gráficos GPON com novo range
-            API.getHistory().then(h => { if(h) { renderOpticalSignalChart(h); renderLatencyGPONChart(h); } });
+            // Re-inicializa o gráfico vazio — polling preencherá novamente
+            initTrafficChartEmpty();
+            initOpticalSignalChartEmpty();
+            initLatencyGPONChartEmpty();
         });
     });
 
@@ -105,7 +194,7 @@ function initDevicesEvents() {
     const addBtn = document.getElementById('add-device-btn-page');
     if (addBtn) addBtn.addEventListener('click', openAddDeviceModal);
 
-    // Carregar tabela de ONUs
+    // Carregar tabela de ONUs (todas as portas na página de dispositivos)
     (async () => {
         const onus = await API.getONUs();
         const tbody = document.getElementById('onus-table-body');
@@ -117,12 +206,12 @@ function initDevicesEvents() {
             const offline = onus.length - online;
             if (onlineBadge)  onlineBadge.textContent  = `${online} Online`;
             if (offlineBadge) {
-                offlineBadge.textContent  = `${offline} Offline`;
+                offlineBadge.textContent   = `${offline} Offline`;
                 offlineBadge.style.display = offline > 0 ? 'inline-flex' : 'none';
             }
         }
 
-        // Polling da tabela de ONUs (atualizar a cada 5s)
+        // Polling da tabela de ONUs (todas as portas)
         API.startPolling(async () => {
             const fresh = await API.getONUs();
             const t     = document.getElementById('onus-table-body');
@@ -166,6 +255,11 @@ function initDevicesEvents() {
             const range    = document.getElementById('scan-range')?.value?.trim() || '10.0.1.0/24';
             const protocol = document.getElementById('scan-protocol')?.value || 'ping';
             const resultsEl = document.getElementById('scan-results');
+
+            if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/\d{1,2}$/.test(range)) {
+                showToast('Faixa de IP inválida. Use o formato 192.168.1.0/24', 'warning');
+                return;
+            }
 
             this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Escaneando...';
             this.disabled  = true;
@@ -645,17 +739,18 @@ function initHistoryEvents() {
     });
 
     // ⑧ CRIAR BACKUP
-    document.getElementById('create-backup-btn')?.addEventListener('click', function () {
+    document.getElementById('create-backup-btn')?.addEventListener('click', async function () {
         this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Criando backup...';
         this.disabled  = true;
-        setTimeout(() => {
-            const backup = BackupStorage.create();
-            this.innerHTML = '<i class="fas fa-database"></i> Criar Backup Agora';
-            this.disabled  = false;
+        const backup = await BackupStorage.create();
+        this.innerHTML = '<i class="fas fa-database"></i> Criar Backup Agora';
+        this.disabled  = false;
+        if (backup) {
             showToast(`Backup criado: ${backup.filename} (${backup.size})`, 'success');
-            // Recarregar a página de histórico para mostrar o novo backup na lista
             navigateTo('history');
-        }, 1200);
+        } else {
+            showToast('Erro ao criar backup. Verifique o servidor.', 'error');
+        }
     });
 
     // ⑨ RESTAURAR BACKUP

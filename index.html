@@ -81,16 +81,19 @@
     <!-- DEPENDÊNCIAS EXTERNAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
-    <!-- MÓDULOS DA APLICAÇÃO (ordem importa) -->
+    <!-- MÓDULOS DA APLICAÇÃO -->
+    <!-- ATENÇÃO: A ordem abaixo é obrigatória.                          -->
+    <!-- api.js e trap-ui.js DEVEM vir antes de router.js               -->
+    <!-- pois router.js dispara o DOMContentLoaded que usa API e TrapUI  -->
     <script src="scripts/js/state.js"></script>
     <script src="scripts/js/data.js"></script>
     <script src="scripts/js/storage.js"></script>
     <script src="scripts/js/charts.js"></script>
     <script src="scripts/js/utils.js"></script>
     <script src="scripts/js/pages.js"></script>
-    <script src="scripts/js/events.js"></script>
-    <script src="scripts/js/router.js"></script>
     <script src="scripts/js/api.js"></script>
     <script src="scripts/js/trap-ui.js"></script>
+    <script src="scripts/js/events.js"></script>
+    <script src="scripts/js/router.js"></script>
 </body>
 </html>

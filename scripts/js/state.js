@@ -4,4 +4,5 @@ const AppState = {
     currentAlertFilter: 'all',
     currentTimeRange: '24h',
     currentSettingsTab: 'general',
+    currentGponPort: '0/1/0',
 };

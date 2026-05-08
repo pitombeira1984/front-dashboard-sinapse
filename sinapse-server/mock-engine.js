@@ -18,16 +18,24 @@ const GPON_TOPOLOGY = {
     splitter: { id:'CTO-01', name:'CTO/Splitter 1:8', type:'1x8 SC/APC', location:'Caixa de Emenda — Poste 42', loss:3.5 },
 };
 
-// ── 8 ONUs — perfis realistas (sinal diminui com distância) ───────────────────
+// ── Portas GPON disponíveis na OLT ───────────────────────────────────────────
+const GPON_PORTS = [
+    { id:'0/1/0', name:'GPON 0/1/0', description:'Bloco A — Andares 1 e 2', maxONUs:8 },
+    { id:'0/1/1', name:'GPON 0/1/1', description:'Bloco A — Andares 2 e 3', maxONUs:8 },
+    { id:'0/1/2', name:'GPON 0/1/2', description:'Bloco B',                  maxONUs:8 },
+    { id:'0/1/3', name:'GPON 0/1/3', description:'Bloco C (reserva)',         maxONUs:8 },
+];
+
+// ── 8 ONUs — perfis realistas (distribuídas entre portas GPON) ───────────────
 const ONU_PROFILES = [
-    { id:1, client:'João Silva',     apt:'Apto 101', serial:'HW-ONU-A1B2C301', ip:'10.0.1.101', model:'HG8245Q2', distance:0.3, rxBase:-17.2 },
-    { id:2, client:'Maria Oliveira', apt:'Apto 102', serial:'HW-ONU-A1B2C302', ip:'10.0.1.102', model:'HG8245Q2', distance:0.5, rxBase:-18.1 },
-    { id:3, client:'Carlos Santos',  apt:'Apto 103', serial:'HW-ONU-A1B2C303', ip:'10.0.1.103', model:'HG8245Q2', distance:0.7, rxBase:-19.3 },
-    { id:4, client:'Ana Costa',      apt:'Apto 201', serial:'HW-ONU-A1B2C304', ip:'10.0.1.104', model:'HG8245Q2', distance:0.9, rxBase:-20.5 },
-    { id:5, client:'Pedro Ferreira', apt:'Apto 202', serial:'HW-ONU-A1B2C305', ip:'10.0.1.105', model:'HG8245Q2', distance:1.1, rxBase:-21.8 },
-    { id:6, client:'Lucia Mendes',   apt:'Apto 203', serial:'HW-ONU-A1B2C306', ip:'10.0.1.106', model:'HG8245Q2', distance:1.3, rxBase:-22.4 },
-    { id:7, client:'Roberto Lima',   apt:'Apto 204', serial:'HW-ONU-A1B2C307', ip:'10.0.1.107', model:'HG8245Q2', distance:1.5, rxBase:-23.1 },
-    { id:8, client:'Fernanda Rocha', apt:'Apto 301', serial:'HW-ONU-A1B2C308', ip:'10.0.1.108', model:'HG8245Q2', distance:1.8, rxBase:-24.2 },
+    { id:1, client:'João Silva',     apt:'Apto 101', serial:'HW-ONU-A1B2C301', ip:'10.0.1.101', model:'HG8245Q2', distance:0.3, rxBase:-17.2, gponPort:'0/1/0', portSlot:0 },
+    { id:2, client:'Maria Oliveira', apt:'Apto 102', serial:'HW-ONU-A1B2C302', ip:'10.0.1.102', model:'HG8245Q2', distance:0.5, rxBase:-18.1, gponPort:'0/1/0', portSlot:1 },
+    { id:3, client:'Carlos Santos',  apt:'Apto 103', serial:'HW-ONU-A1B2C303', ip:'10.0.1.103', model:'HG8245Q2', distance:0.7, rxBase:-19.3, gponPort:'0/1/0', portSlot:2 },
+    { id:4, client:'Ana Costa',      apt:'Apto 201', serial:'HW-ONU-A1B2C304', ip:'10.0.1.104', model:'HG8245Q2', distance:0.9, rxBase:-20.5, gponPort:'0/1/0', portSlot:3 },
+    { id:5, client:'Pedro Ferreira', apt:'Apto 202', serial:'HW-ONU-A1B2C305', ip:'10.0.1.105', model:'HG8245Q2', distance:1.1, rxBase:-21.8, gponPort:'0/1/1', portSlot:0 },
+    { id:6, client:'Lucia Mendes',   apt:'Apto 203', serial:'HW-ONU-A1B2C306', ip:'10.0.1.106', model:'HG8245Q2', distance:1.3, rxBase:-22.4, gponPort:'0/1/1', portSlot:1 },
+    { id:7, client:'Roberto Lima',   apt:'Apto 204', serial:'HW-ONU-A1B2C307', ip:'10.0.1.107', model:'HG8245Q2', distance:1.5, rxBase:-23.1, gponPort:'0/1/1', portSlot:2 },
+    { id:8, client:'Fernanda Rocha', apt:'Apto 301', serial:'HW-ONU-A1B2C308', ip:'10.0.1.108', model:'HG8245Q2', distance:1.8, rxBase:-24.2, gponPort:'0/1/2', portSlot:0 },
 ];
 
 // ── Estado dinâmico das ONUs ──────────────────────────────────────────────────
@@ -84,7 +92,7 @@ const appState = {
             status:'online', rxPower:p.rxBase, txPower:2.5,
             latency:parseFloat((5+p.distance*3).toFixed(1)),
             distance:`${p.distance} km`, uptime:'0d 00:00:00',
-            port:`0/1/0:${p.id-1}`,
+            gponPort:p.gponPort, port:`${p.gponPort}:${p.portSlot}`,
         })),
     ],
     alerts: [
@@ -209,7 +217,7 @@ function _triggerAutoAlert(event) {
     if (event.type === 'onuOffline') {
         const title = `ONU Offline — ${event.onu.apt}`;
         if (appState.alerts.find(a => a.title === title && a.severity !== 'resolved')) return;
-        appState.alerts.unshift({ id:Date.now(), title, source:'auto', description:`${event.onu.client} • ${event.onu.ip} • Porta 0/1/0:${event.onu.id-1}`, severity:'critical', time:nowStr(), device:'OLT-01' });
+        appState.alerts.unshift({ id:Date.now(), title, source:'auto', description:`${event.onu.client} • ${event.onu.ip} • Porta ${event.onu.gponPort}:${event.onu.portSlot}`, severity:'critical', time:nowStr(), device:'OLT-01' });
     }
     if (event.type === 'onuOnline') {
         appState.alerts = appState.alerts.map(a => a.title === `ONU Offline — ${event.onu.apt}` ? {...a, severity:'resolved', resolvedAt:nowStr()} : a);
@@ -226,7 +234,7 @@ function getSnapshot() {
             nms:      GPON_TOPOLOGY.nms,
             olt:      { ...GPON_TOPOLOGY.olt, cpu:live.cpuNow, memory:Math.round((snmpState.memUsed/512)*100), uptime:uptimeToString(snmpState.uptime) },
             splitter: GPON_TOPOLOGY.splitter,
-            onus:     onuState.map(o => ({ id:o.id, apt:o.apt, client:o.client, serial:o.serial, ip:o.ip, model:o.model, port:`0/1/0:${o.id-1}`, status:o.status, rxPower:o.rxPower, txPower:o.txPower, latency:o.latency, distance:`${o.distance} km`, uptime:uptimeToString(o.uptimeTicks), degraded:o.degraded, lastSeen:o.lastSeen })),
+            onus:     onuState.map(o => ({ id:o.id, apt:o.apt, client:o.client, serial:o.serial, ip:o.ip, model:o.model, gponPort:o.gponPort, port:`${o.gponPort}:${o.portSlot}`, status:o.status, rxPower:o.rxPower, txPower:o.txPower, latency:o.latency, distance:`${o.distance} km`, uptime:uptimeToString(o.uptimeTicks), degraded:o.degraded, lastSeen:o.lastSeen })),
         },
         device: { name:'OLT Huawei MA5800-X2', model:'MA5800-X2', firmware:GPON_TOPOLOGY.olt.firmware, serial:GPON_TOPOLOGY.olt.serial, uptime:uptimeToString(snmpState.uptime), uptimeTicks:snmpState.uptime, location:'POP — Av. Principal, 1234', contact:'ti@provedor.com.br' },
         system:  { cpu:live.cpuNow, memUsed:Math.round(snmpState.memUsed), memTotal:512, memPercent:Math.round((snmpState.memUsed/512)*100), temperature:jitter(48,2) },
@@ -255,8 +263,35 @@ function getHistory() {
     };
 }
 
-function getONUs() {
-    return onuState.map(o => ({ id:o.id, apt:o.apt, client:o.client, serial:o.serial, ip:o.ip, model:o.model, port:`0/1/0:${o.id-1}`, status:o.status, rxPower:o.rxPower, txPower:o.txPower, latency:o.latency, distance:`${o.distance} km`, uptime:uptimeToString(o.uptimeTicks), degraded:o.degraded, lastSeen:o.lastSeen }));
+function getONUs(port) {
+    const all = onuState.map(o => ({ id:o.id, apt:o.apt, client:o.client, serial:o.serial, ip:o.ip, model:o.model, gponPort:o.gponPort, port:`${o.gponPort}:${o.portSlot}`, status:o.status, rxPower:o.rxPower, txPower:o.txPower, latency:o.latency, distance:`${o.distance} km`, uptime:uptimeToString(o.uptimeTicks), degraded:o.degraded, lastSeen:o.lastSeen }));
+    return port ? all.filter(o => o.gponPort === port) : all;
+}
+
+function getGponPorts() {
+    const byPort = {};
+    onuState.forEach(o => {
+        const p = o.gponPort;
+        if (!byPort[p]) byPort[p] = { online:0, total:0, rxSum:0, rxCount:0, latSum:0, latCount:0 };
+        byPort[p].total++;
+        if (o.status === 'online') {
+            byPort[p].online++;
+            byPort[p].rxSum  += o.rxPower;
+            byPort[p].rxCount++;
+            byPort[p].latSum  += o.latency;
+            byPort[p].latCount++;
+        }
+    });
+    return GPON_PORTS.map(p => {
+        const s = byPort[p.id] || { online:0, total:0, rxSum:0, rxCount:0, latSum:0, latCount:0 };
+        return {
+            ...p,
+            onusOnline:  s.online,
+            onusTotal:   s.total,
+            avgRxPower:  s.rxCount  ? parseFloat((s.rxSum  / s.rxCount).toFixed(2)) : null,
+            avgLatency:  s.latCount ? parseFloat((s.latSum / s.latCount).toFixed(1)) : null,
+        };
+    });
 }
 
 // ── CRUD ──────────────────────────────────────────────────────────────────────
@@ -284,13 +319,13 @@ function createBackup() {
     _addHistory({event:'Backup Criado',device:'SINAPSE Node',duration:'--',action:snap.filename,user:'admin',type:'backup'});
     return snap;
 }
-function restoreBackup(id)  { const b=appState.backups.find(x=>x.id===id); if(!b) return false; appState.devices=b.devices; appState.alerts=b.alerts; appState.rules=b.rules; appState.settings=b.settings; return true; }
+function restoreBackup(id)  { const b=appState.backups.find(x=>x.id===id); if(!b) return false; appState.devices=b.devices; appState.alerts=b.alerts; appState.rules=b.rules; appState.settings=b.settings; if(b.history) appState.history=b.history; return true; }
 function removeBackup(id)   { appState.backups=appState.backups.filter(b=>b.id!==id); }
 function getSettings()      { return appState.settings; }
 function saveSettings(s)    { appState.settings={...appState.settings,...s}; return appState.settings; }
 
 module.exports = {
-    getSnapshot, getHistory, getONUs, OIDs, GPON_TOPOLOGY,
+    getSnapshot, getHistory, getONUs, getGponPorts, OIDs, GPON_TOPOLOGY, GPON_PORTS,
     getDevices, addDevice, updateDevice, removeDevice,
     getAlerts, resolveAlert, ignoreAlert, addAlert,
     getRules, addRule, updateRule, toggleRule, removeRule,

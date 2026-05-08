@@ -73,7 +73,11 @@ function showToast(message, type = 'success') {
 }
 
 // ----- Modal -----
+let _modalDestroy = null;
+
 function openModal(title, content, confirmText, confirmCallback) {
+    if (_modalDestroy) _modalDestroy();
+
     document.getElementById('modal-title').textContent   = title;
     document.getElementById('modal-body').innerHTML      = content;
     document.getElementById('modal-confirm').textContent = confirmText;
@@ -85,6 +89,7 @@ function openModal(title, content, confirmText, confirmCallback) {
     const confirmBtn = document.getElementById('modal-confirm');
 
     const destroy = () => {
+        _modalDestroy = null;
         modal.style.display = 'none';
         closeBtn.removeEventListener('click', destroy);
         cancelBtn.removeEventListener('click', destroy);
@@ -98,10 +103,23 @@ function openModal(title, content, confirmText, confirmCallback) {
     cancelBtn.addEventListener('click', destroy);
     confirmBtn.addEventListener('click', onConfirm);
     modal.addEventListener('click', onOutside);
+
+    _modalDestroy = destroy;
 }
 
 function closeModal() {
-    document.getElementById('modal').style.display = 'none';
+    if (_modalDestroy) _modalDestroy();
+    else document.getElementById('modal').style.display = 'none';
+}
+
+// ----- Escape HTML -----
+function escHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 // ===== AÇÕES — DISPOSITIVOS =====

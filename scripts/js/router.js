@@ -25,6 +25,13 @@ function updatePageTitle(page) {
 }
 
 function loadPageContent(page) {
+    // ── Parar todos os pollings antes de trocar de página ──────────────────
+    // Evita múltiplos intervalos empilhados ao navegar entre páginas
+    if (typeof API !== 'undefined') {
+        API.stopPolling();
+        API.stopTrapPolling();
+    }
+
     const contentDiv = document.getElementById('main-content');
 
     const pageMap = {

@@ -21,7 +21,7 @@
 
 const express      = require('express');
 const cors         = require('cors');
-const { getSnapshot, getHistory, getONUs, GPON_TOPOLOGY, OIDs,
+const { getSnapshot, getHistory, getONUs, getGponPorts, GPON_TOPOLOGY, GPON_PORTS, OIDs,
         getDevices, addDevice, updateDevice, removeDevice,
         getAlerts, resolveAlert, ignoreAlert, addAlert,
         getRules, addRule, updateRule, toggleRule, removeRule,
@@ -58,9 +58,8 @@ function getCachedSnapshot() {
     if (!lastSnapshot || now - lastSnapshotAt > 2000) {
         lastSnapshot   = getSnapshot();
         lastSnapshotAt = now;
+        traps.evaluateTraps(lastSnapshot);
     }
-    // Avaliar Traps a cada snapshot novo
-    traps.evaluateTraps(lastSnapshot);
     return lastSnapshot;
 }
 
@@ -113,28 +112,54 @@ app.get('/api/device/history', (_req, res) => {
 });
 
 // Métricas mínimas para polling rápido (frontend atualiza a cada 5s)
-app.get('/api/metrics/live', (_req, res) => {
+// Aceita ?port=0/1/0 para retornar KPIs filtrados por porta GPON
+app.get('/api/metrics/live', (req, res) => {
+    const port = req.query.port || null;
     const snap = getCachedSnapshot();
+
+    let onusOnline, onusTotal, avgRxPower, avgLatency, availability;
+
+    if (port) {
+        const portONUs   = getONUs(port);
+        const onlineONUs = portONUs.filter(o => o.status === 'online');
+        onusOnline  = onlineONUs.length;
+        onusTotal   = portONUs.length;
+        avgRxPower  = onlineONUs.length
+            ? parseFloat((onlineONUs.reduce((s, o) => s + o.rxPower,  0) / onlineONUs.length).toFixed(2))
+            : null;
+        avgLatency  = onlineONUs.length
+            ? parseFloat((onlineONUs.reduce((s, o) => s + o.latency, 0) / onlineONUs.length).toFixed(1))
+            : null;
+        availability = onusTotal
+            ? parseFloat(((onusOnline / onusTotal) * 100).toFixed(2))
+            : 100;
+    } else {
+        onusOnline   = snap.gpon?.onusOnline  ?? 0;
+        onusTotal    = snap.gpon?.onusTotal   ?? 8;
+        avgRxPower   = snap.gpon?.avgRxPower  ?? 0;
+        avgLatency   = snap.gpon?.avgLatency  ?? 0;
+        availability = snap.gpon?.availability ?? 100;
+    }
+
     send(res, {
         data: {
-            timestamp:   snap.timestamp,
-            cpu:         snap.system.cpu,
-            memPercent:  snap.system.memPercent,
-            temperature: snap.system.temperature,
-            rxPower:     snap.optical.rxPower,
-            txPower:     snap.optical.txPower,
+            timestamp:     snap.timestamp,
+            cpu:           snap.system.cpu,
+            memPercent:    snap.system.memPercent,
+            temperature:   snap.system.temperature,
+            rxPower:       snap.optical.rxPower,
+            txPower:       snap.optical.txPower,
             opticalStatus: snap.optical.status,
-            wanInRate:   snap.interfaces[0]?.inRate  || 0,
-            wanOutRate:  snap.interfaces[0]?.outRate || 0,
-            wifiClients: snap.wifi.band24.clients + snap.wifi.band5.clients,
-            // GPON KPIs
-            onusOnline:   snap.gpon?.onusOnline  ?? 0,
-            onusTotal:    snap.gpon?.onusTotal   ?? 8,
-            avgRxPower:   snap.gpon?.avgRxPower  ?? 0,
-            avgLatency:   snap.gpon?.avgLatency  ?? 0,
-            availability: snap.gpon?.availability ?? 100,
-            uptime:      snap.device.uptime,
-            anomaly:     snap.anomaly,
+            wanInRate:     snap.interfaces[0]?.inRate  || 0,
+            wanOutRate:    snap.interfaces[0]?.outRate || 0,
+            wifiClients:   snap.wifi.band24.clients + snap.wifi.band5.clients,
+            onusOnline,
+            onusTotal,
+            avgRxPower,
+            avgLatency,
+            availability,
+            uptime:        snap.device.uptime,
+            anomaly:       snap.anomaly,
         }
     });
 });
@@ -249,15 +274,16 @@ app.put('/api/traps/acknowledge-all', (_req, res) => {
 
 
 // ── Topografia GPON ───────────────────────────────────────────────────────────
-app.get('/api/topology',   (_req, res) => { send(res, { data: getCachedSnapshot().topology }); });
-app.get('/api/onus',       (_req, res) => { send(res, { data: getONUs() }); });
-app.get('/api/onus/:id',   (req,  res) => {
+app.get('/api/topology',    (_req, res) => { send(res, { data: getCachedSnapshot().topology }); });
+app.get('/api/onus',        (req,  res) => { send(res, { data: getONUs(req.query.port || null) }); });
+app.get('/api/onus/:id',    (req,  res) => {
     const onus = getONUs();
     const onu  = onus.find(o => o.id === parseInt(req.params.id));
     if (!onu) return res.status(404).json({ ok:false, error:'ONU não encontrada' });
     send(res, { data: onu });
 });
-app.get('/api/gpon/kpis',  (_req, res) => { send(res, { data: getCachedSnapshot().gpon }); });
+app.get('/api/gpon/ports',  (_req, res) => { send(res, { data: getGponPorts() }); });
+app.get('/api/gpon/kpis',   (_req, res) => { send(res, { data: getCachedSnapshot().gpon }); });
 
 // ── CRUD Dispositivos ─────────────────────────────────────────────────────────
 app.get('/api/devices',       (_,res)   => send(res, { data: getDevices() }));
