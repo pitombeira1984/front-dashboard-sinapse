@@ -97,7 +97,7 @@ function initDashboardEvents() {
             const grid    = document.getElementById('devices-grid-dashboard');
             if (grid && devices && devices.length) {
                 const olt  = devices.filter(d => d.type === 'OLT');
-                const onus = devices.filter(d => d.type === 'ONU' && d.gponPort === AppState.currentGponPort).slice(0, 3);
+                const onus = devices.filter(d => d.type === 'ONU' && d.gponPort === AppState.currentGponPort);
                 const show = [...olt, ...onus];
                 grid.innerHTML = renderDeviceCards(show.length ? show : devices.slice(0, 4));
             }
@@ -156,7 +156,7 @@ function initDashboardEvents() {
                     const grid = document.getElementById('devices-grid-dashboard');
                     if (grid && devices) {
                         const olt       = devices.filter(d => d.type === 'OLT');
-                        const port_onus = devices.filter(d => d.type === 'ONU' && d.gponPort === AppState.currentGponPort).slice(0, 3);
+                        const port_onus = devices.filter(d => d.type === 'ONU' && d.gponPort === AppState.currentGponPort);
                         grid.innerHTML  = renderDeviceCards([...olt, ...port_onus]);
                     }
 
