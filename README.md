@@ -6,7 +6,18 @@ Dashboard de monitoramento preditivo de redes GPON com interface web em **Vanill
 
 ## Visão Geral
 
-O SINAPSE monitora em tempo real dispositivos de rede como ONUs de fibra óptica (baseado no Huawei EchoLife HG8145X6), exibindo métricas de CPU, memória, temperatura, potência óptica e tráfego de rede. O sistema simula respostas SNMP reais enquanto o hardware (Orange Pi) não está disponível — a migração para dados reais exige alterar apenas um arquivo no servidor.
+O SINAPSE é um dashboard de monitoramento preditivo para redes GPON, com foco em dispositivos de fibra óptica como ONUs e OLTs (baseado no Huawei EchoLife HG8145X6 / MA5800). A interface exibe em tempo real métricas de potência óptica (RxPower/TxPower), CPU, memória, temperatura, latência e tráfego de rede, com polling automático de 5 segundos.
+
+O sistema é composto por **6 páginas funcionais**:
+
+- **Dashboard** — KPIs por porta GPON, gráficos ao vivo (tráfego, sinal óptico, latência, RxPower por ONU) e resumo de SNMP Traps
+- **Dispositivos** — Tabela de ONUs em tempo real + CRUD completo de dispositivos com filtros e descoberta automática de rede
+- **Alertas** — Gerenciamento de alertas por severidade, SNMP Traps com reconhecimento e regras de notificação configuráveis (Email, Telegram, SMS)
+- **Análise** — Predição de falhas com modelos de IA (Isolation Forest, Regressão Linear, LSTM) e agendamento de manutenções
+- **Configurações** — Parâmetros de rede, monitoramento, notificações e informações do nó
+- **Histórico** — Auditoria de eventos com filtros, exportação (CSV/JSON/PDF) e sistema de backup/restauração
+
+O backend simula respostas SNMP reais enquanto o hardware (Orange Pi) não está disponível — a migração para dados reais exige substituir apenas um arquivo no servidor (`mock-engine.js` → `snmp-engine.js`).
 
 ---
 
