@@ -84,11 +84,12 @@ O gráfico de Tráfego possui botões de range (24h / 7d / 30d); ao trocar o ran
 - Lista os alertas não resolvidos do `AlertStorage` com badge de contagem crítica.
 
 **Dispositivos Monitorados**
-- Cards com métricas ao vivo dos dispositivos. Exibe OLTs + ONUs da porta selecionada (ou os 4 primeiros como fallback).
+- Cards com métricas ao vivo atualizados a cada 5s em sincronia com as KPIs: OLT (CPU, memória, temperatura, ONUs ativas) + ONUs da porta selecionada (status online/offline, RxPower, latência). Os valores exibidos nos cards são a mesma fonte de dados que compõem `avgRxPower` e `avgLatency` nas KPIs.
 
 **SNMP Traps**
-- Card de resumo de Traps injetado dinamicamente via `renderTrapSummaryCard()`.
+- Card de resumo injetado dinamicamente via `renderTrapSummaryCard()`.
 - Polling independente a cada 5s detecta novos traps e exibe toast de notificação.
+- Traps disparados automaticamente por eventos de ONU: `linkDown` (offline), `linkUp` (reconectado), `opticalDegradation` (RxPower < -24 dBm).
 
 ---
 
@@ -216,8 +217,8 @@ Log de eventos e gerenciamento de backups.
 
 **Backend**
 - Node.js + Express
-- Engine de simulação SNMP (`mock-engine.js`)
-- Engine de SNMP Traps (`trap-engine.js`)
+- Engine de simulação SNMP (`mock-engine.js`) — topologia GPON com 8 ONUs, estados dinâmicos (offline/online, degradação óptica) e sincronização com `appState.devices`
+- Engine de SNMP Traps (`trap-engine.js`) — rastreia estado individual por ONU; gera `linkDown`/`linkUp` ao mudar status e `opticalDegradation` quando RxPower < -24 dBm
 - REST API completa com CRUD para dispositivos, alertas, regras, histórico, backups e configurações
 
 ---

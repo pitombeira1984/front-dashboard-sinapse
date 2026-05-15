@@ -147,6 +147,8 @@ npm run dev
 
 ## Exemplo de resposta — `/api/metrics/live`
 
+Aceita `?port=0/1/0` para filtrar KPIs por porta GPON. Sem o parâmetro retorna totais globais.
+
 ```json
 {
   "ok": true,
@@ -161,6 +163,11 @@ npm run dev
     "wanInRate":     48.2,
     "wanOutRate":    19.1,
     "wifiClients":   5,
+    "onusOnline":    7,
+    "onusTotal":     8,
+    "avgRxPower":    -20.4,
+    "avgLatency":    8.3,
+    "availability":  87.5,
     "uptime":        "3d 14:22:10",
     "anomaly":       null
   }
@@ -173,15 +180,26 @@ npm run dev
 
 O `mock-engine.js` simula comportamentos reais do equipamento:
 
-- **Deriva suave** — valores mudam gradualmente como num equipamento real
-- **Anomalias ocasionais** — ocorrem aleatoriamente e se recuperam sozinhas:
-  - `rxDrop` — degradação óptica (RxPower cai 4–8 dBm) → alerta crítico
-  - `cpuSpike` — pico de CPU (vai a 85%) → alerta warning
-  - `clientDrop` — queda de clientes Wi-Fi → alerta warning
+- **Deriva suave** — valores mudam gradualmente (função `drift`) como num equipamento real
+- **ONUs offline/online** — cada ONU tem ~1,2% de chance por tick de ir offline por 15–40s; no máximo 2 ONUs ficam offline simultaneamente
+- **Degradação óptica individual** — cada ONU pode sofrer queda de RxPower de 1–8 dBm simulando sujeira no conector ou curvatura de fibra
+- **Anomalia de CPU** — picos ocasionais a 85–98% que se recuperam automaticamente
 - **Contadores crescentes** — `ifInOctets`, `ifOutOctets`, `ipInReceives` acumulam continuamente
 - **OIDs reais** — todos os OIDs usados são os mesmos que o equipamento real responde via SNMP
 
-O `trap-engine.js` gera SNMP Traps simulados com severidades e tipos variados, permitindo testar o fluxo completo de recebimento, filtragem e acknowledge de traps no frontend.
+O `trap-engine.js` rastreia o estado individual de cada ONU e da OLT e gera traps automaticamente a cada polling:
+
+| Evento | Tipo de Trap | Severidade |
+|--------|-------------|------------|
+| ONU vai offline | `linkDown` | critical |
+| ONU volta online | `linkUp` | info |
+| RxPower ONU < -24 dBm | `opticalDegradation` | critical |
+| Sinal óptico ONU recuperado | `linkUp` | info |
+| RxPower médio OLT < -22 dBm | `opticalDegradation` | critical |
+| CPU OLT > 70% | `highCPU` | warning |
+| Temperatura OLT > 50°C | `highTemperature` | warning |
+| Falha de autenticação SNMP (ocasional) | `authenticationFailure` | critical |
+| Watchdog durante pico de CPU | `warmStart` | warning |
 
 ---
 
