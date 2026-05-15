@@ -104,6 +104,8 @@ const trapState = {
         cpuAlarmActive:      false,
         lastAuthFailAt:      0,
         coldStartSent:       false,
+        onuStatus:           {},   // { onuId: 'online'|'offline' } — rastreia estado por ONU
+        onuOptical:          {},   // { onuId: boolean } — alarm óptico ativo por ONU
     },
 };
 
@@ -239,6 +241,64 @@ function evaluateTraps(snapshot) {
             sysUpTime: snapshot.device.uptimeTicks,
         });
     }
+
+    // ── Traps por ONU: linkDown/linkUp + degradação óptica individual ─────────
+    const onus = snapshot.topology?.onus || [];
+    onus.forEach(onu => {
+        const prevStatus = trapState.flags.onuStatus[onu.id];
+        const currStatus = onu.status;
+
+        // Mudança de estado da ONU → linkDown ou linkUp
+        if (prevStatus !== undefined && prevStatus !== currStatus) {
+            if (currStatus === 'offline') {
+                makeTrap('linkDown', `ONU — ${onu.apt}`, {
+                    ifDescr:   `GPON ${onu.port} — ${onu.client}`,
+                    ifType:    'gpon-onu',
+                    onuSerial: onu.serial,
+                    onuIp:     onu.ip,
+                    gponPort:  onu.gponPort,
+                    lastSeen:  onu.lastSeen,
+                });
+            } else {
+                makeTrap('linkUp', `ONU — ${onu.apt}`, {
+                    ifDescr:   `GPON ${onu.port} — ${onu.client} (reconectado)`,
+                    ifType:    'gpon-onu',
+                    onuSerial: onu.serial,
+                    onuIp:     onu.ip,
+                    gponPort:  onu.gponPort,
+                });
+            }
+        }
+        trapState.flags.onuStatus[onu.id] = currStatus;
+
+        // Degradação óptica individual: dispara quando rxPower < -24 dBm
+        if (currStatus === 'online') {
+            const prevAlarm = trapState.flags.onuOptical[onu.id] || false;
+            const isAlarm   = onu.rxPower < -24;
+            if (isAlarm && !prevAlarm) {
+                makeTrap('opticalDegradation', `ONU — ${onu.apt}`, {
+                    hwGponOntRxPower: Math.round(onu.rxPower * 100),
+                    rxPowerDbm:       onu.rxPower,
+                    thresholdMin:     -24,
+                    opticalStatus:    onu.rxPower < -27 ? 'critical' : 'degraded',
+                    onuSerial:        onu.serial,
+                    onuClient:        onu.client,
+                    onuIp:            onu.ip,
+                    gponPort:         onu.gponPort,
+                });
+            } else if (!isAlarm && prevAlarm) {
+                makeTrap('linkUp', `ONU — ${onu.apt}`, {
+                    ifDescr:       `GPON ${onu.port} — Sinal óptico recuperado`,
+                    rxPowerDbm:    onu.rxPower,
+                    onuSerial:     onu.serial,
+                    opticalStatus: 'online',
+                });
+            }
+            trapState.flags.onuOptical[onu.id] = isAlarm;
+        } else {
+            trapState.flags.onuOptical[onu.id] = false;
+        }
+    });
 }
 
 // ── API pública ───────────────────────────────────────────────────────────────

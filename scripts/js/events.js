@@ -50,8 +50,8 @@ function initDashboardEvents() {
         } catch(e) {}
     })();
 
-    // Polling principal: KPIs + gráficos de linha em tempo real
-    API.startPolling(data => {
+    // Polling principal: KPIs + gráficos + dispositivos em tempo real
+    API.startPolling(async (data) => {
         applyLiveData(data);
         if (typeof pushGPONChartPoints === 'function') pushGPONChartPoints(data);
         // Barra de disponibilidade
@@ -60,7 +60,7 @@ function initDashboardEvents() {
             availBar.style.width = `${Math.min(data.availability, 100)}%`;
             availBar.style.backgroundColor = data.availability >= 99 ? 'var(--success-color)' : data.availability >= 90 ? 'var(--warning-color)' : 'var(--danger-color)';
         }
-        // Trend de ONUs (filtra pelo port selecionado, mas usa dados totais do live)
+        // Trend de ONUs
         const trend = document.getElementById('onus-trend');
         if (trend && data.onusOnline !== undefined) {
             const offline = (data.onusTotal ?? 8) - data.onusOnline;
@@ -68,6 +68,24 @@ function initDashboardEvents() {
                 ? `<i class="fas fa-exclamation-triangle" style="color:var(--danger-color);"></i> <span style="color:var(--danger-color);">${offline} offline</span>`
                 : `<i class="fas fa-check-circle" style="color:var(--success-color);"></i> <span>Todas online</span>`;
         }
+        // Sincronizar Dispositivos Monitorados e gráfico RxPower com estado atual das ONUs
+        try {
+            const onus = await API.getONUs(AppState.currentGponPort);
+            if (onus && onus.length) {
+                renderONURxPowerChart(onus);
+                const grid = document.getElementById('devices-grid-dashboard');
+                if (grid) {
+                    const oltDevice = {
+                        id: 100, name: 'OLT Huawei MA5800-X2', ip: '10.0.1.10',
+                        type: 'OLT', status: 'online',
+                        cpu: data.cpu, memory: data.memPercent, temperature: data.temperature,
+                        onus_active: data.onusOnline, onus_total: data.onusTotal,
+                    };
+                    const onuDevices = onus.map(o => ({ ...o, name: `ONU — ${o.apt}`, type: 'ONU' }));
+                    grid.innerHTML = renderDeviceCards([oltDevice, ...onuDevices]);
+                }
+            }
+        } catch(e) {}
     });
 
     // FIX 4: Trap polling — atualiza badge, toast E o card no dashboard
@@ -90,20 +108,6 @@ function initDashboardEvents() {
         }
     })();
 
-    // FIX 3: Dispositivos Monitorados com dados reais do servidor
-    (async () => {
-        try {
-            const devices = await API.getDevices();
-            const grid    = document.getElementById('devices-grid-dashboard');
-            if (grid && devices && devices.length) {
-                const olt  = devices.filter(d => d.type === 'OLT');
-                const onus = devices.filter(d => d.type === 'ONU' && d.gponPort === AppState.currentGponPort);
-                const show = [...olt, ...onus];
-                grid.innerHTML = renderDeviceCards(show.length ? show : devices.slice(0, 4));
-            }
-        } catch(e) {}
-    })();
-
     // FIX 2: Seletor de portas GPON
     (async () => {
         try {
@@ -123,10 +127,9 @@ function initDashboardEvents() {
                     initLatencyGPONChartEmpty();
 
                     // Buscar dados em paralelo para a nova porta
-                    const [liveData, onus, devices] = await Promise.all([
+                    const [liveData, onus] = await Promise.all([
                         API.getLive(AppState.currentGponPort),
                         API.getONUs(AppState.currentGponPort),
-                        API.getDevices(),
                     ]);
 
                     // Atualizar KPIs e gráficos com dados da nova porta
@@ -149,15 +152,20 @@ function initDashboardEvents() {
                         }
                     }
 
-                    // Atualizar gráfico de barras RxPower para nova porta
-                    if (onus) renderONURxPowerChart(onus);
-
-                    // Atualizar cards de dispositivos para nova porta
-                    const grid = document.getElementById('devices-grid-dashboard');
-                    if (grid && devices) {
-                        const olt       = devices.filter(d => d.type === 'OLT');
-                        const port_onus = devices.filter(d => d.type === 'ONU' && d.gponPort === AppState.currentGponPort);
-                        grid.innerHTML  = renderDeviceCards([...olt, ...port_onus]);
+                    // Atualizar gráfico de barras RxPower e Dispositivos Monitorados para nova porta
+                    if (onus && onus.length) {
+                        renderONURxPowerChart(onus);
+                        const grid = document.getElementById('devices-grid-dashboard');
+                        if (grid && liveData) {
+                            const oltDevice = {
+                                id: 100, name: 'OLT Huawei MA5800-X2', ip: '10.0.1.10',
+                                type: 'OLT', status: 'online',
+                                cpu: liveData.cpu, memory: liveData.memPercent, temperature: liveData.temperature,
+                                onus_active: liveData.onusOnline, onus_total: liveData.onusTotal,
+                            };
+                            const onuDevices = onus.map(o => ({ ...o, name: `ONU — ${o.apt}`, type: 'ONU' }));
+                            grid.innerHTML = renderDeviceCards([oltDevice, ...onuDevices]);
+                        }
                     }
 
                     // Feedback visual
