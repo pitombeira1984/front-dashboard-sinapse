@@ -75,11 +75,14 @@ function renderDeviceCards(devices) {
                     const txColor  = d.txPower   !== undefined ? (d.txPower < 0.5 || d.txPower > 5 ? 'var(--danger-color)' : d.txPower < 1.0 ? 'var(--warning-color)' : 'var(--success-color)') : '#e2e8f0';
                     const sfpColor = d.sfpTemp   !== undefined ? (d.sfpTemp >= 70 ? 'var(--danger-color)' : d.sfpTemp >= 50 ? 'var(--warning-color)' : 'var(--success-color)') : '#e2e8f0';
                     const vColor   = d.sfpVoltage !== undefined ? (d.sfpVoltage < 3.0 || d.sfpVoltage > 3.6 ? 'var(--danger-color)' : d.sfpVoltage < 3.1 || d.sfpVoltage > 3.5 ? 'var(--warning-color)' : 'var(--success-color)') : '#e2e8f0';
+                    const berColor = d.ber !== undefined ? (d.ber > 1e-6 ? 'var(--danger-color)' : d.ber > 1e-9 ? 'var(--warning-color)' : 'var(--success-color)') : '#e2e8f0';
+                    const berFmt   = v => v === undefined ? '--' : Number(v).toExponential(2);
                     return `
                     <div class="metric"><div class="metric-label">RxPower</div><div class="metric-value" style="color:${rxColor};">${d.status === 'online' ? (d.rxPower ?? '--') + ' dBm' : '--'}</div></div>
                     <div class="metric"><div class="metric-label">TxPower</div><div class="metric-value" style="color:${txColor};">${d.status === 'online' ? (d.txPower ?? '--') + ' dBm' : '--'}</div></div>
                     <div class="metric"><div class="metric-label">Temp. SFP</div><div class="metric-value" style="color:${sfpColor};">${d.status === 'online' ? (d.sfpTemp ?? '--') + ' °C' : '--'}</div></div>
                     <div class="metric"><div class="metric-label">Tensão SFP</div><div class="metric-value" style="color:${vColor};">${d.status === 'online' ? (d.sfpVoltage ?? '--') + ' V' : '--'}</div></div>
+                    <div class="metric"><div class="metric-label">BER</div><div class="metric-value" style="color:${berColor};font-size:0.8rem;">${d.status === 'online' ? berFmt(d.ber) : '--'}</div></div>
                     <div class="metric"><div class="metric-label">Uptime SFP</div><div class="metric-value" style="font-size:0.75rem;">${d.status === 'online' ? (d.uptime ?? '--') : '--'}</div></div>
                     <div class="metric"><div class="metric-label">Latência</div><div class="metric-value">${d.status === 'online' ? (d.latency ?? '--') + ' ms' : '--'}</div></div>
                     <div class="metric"><div class="metric-label">Distância</div><div class="metric-value">${d.distance ?? '--'}</div></div>
