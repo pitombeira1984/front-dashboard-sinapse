@@ -86,13 +86,14 @@ O gráfico de Tráfego possui botões de range (24h / 7d / 30d); ao trocar o ran
 **Dispositivos Monitorados**
 - Cards com métricas ao vivo atualizados a cada 5s em sincronia com as KPIs.
 - **OLT:** CPU, Memória, Temperatura interna, ONUs Ativas.
-- **ONUs:** RxPower (colorido por limiar), **TxPower** (potência de transmissão laser da porta), **Temp. SFP** (temperatura do módulo transceptor GBIC/SFP), **Uptime SFP** (tempo de operação contínua do módulo), Latência, Distância, Cliente. Valores com código de cor por faixa operacional:
+- **ONUs:** RxPower (colorido por limiar), **TxPower** (potência de transmissão laser da porta), **Temp. SFP** (temperatura do módulo transceptor GBIC/SFP), **Tensão SFP** (tensão de alimentação do módulo), **Uptime SFP** (tempo de operação contínua do módulo), Latência, Distância, Cliente. Valores com código de cor por faixa operacional:
 
 | Campo | Verde | Amarelo | Vermelho |
 |-------|-------|---------|----------|
 | RxPower | > −24 dBm | −24 a −27 dBm | < −27 dBm |
 | TxPower | 1,0 a 5,0 dBm | 0,5 a 1,0 dBm | < 0,5 ou > 5,0 dBm |
 | Temp. SFP | < 50 °C | 50 a 70 °C | ≥ 70 °C |
+| Tensão SFP | 3,1 a 3,5 V | 3,0 a 3,1 V / 3,5 a 3,6 V | < 3,0 V ou > 3,6 V |
 
 - Os valores exibidos nos cards são a mesma fonte de dados que compõem `avgRxPower` e `avgLatency` nas KPIs.
 
