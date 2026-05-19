@@ -78,6 +78,7 @@ function renderDeviceCards(devices) {
                     <div class="metric"><div class="metric-label">RxPower</div><div class="metric-value" style="color:${rxColor};">${d.status === 'online' ? (d.rxPower ?? '--') + ' dBm' : '--'}</div></div>
                     <div class="metric"><div class="metric-label">TxPower</div><div class="metric-value" style="color:${txColor};">${d.status === 'online' ? (d.txPower ?? '--') + ' dBm' : '--'}</div></div>
                     <div class="metric"><div class="metric-label">Temp. SFP</div><div class="metric-value" style="color:${sfpColor};">${d.status === 'online' ? (d.sfpTemp ?? '--') + ' °C' : '--'}</div></div>
+                    <div class="metric"><div class="metric-label">Uptime SFP</div><div class="metric-value" style="font-size:0.75rem;">${d.status === 'online' ? (d.uptime ?? '--') : '--'}</div></div>
                     <div class="metric"><div class="metric-label">Latência</div><div class="metric-value">${d.status === 'online' ? (d.latency ?? '--') + ' ms' : '--'}</div></div>
                     <div class="metric"><div class="metric-label">Distância</div><div class="metric-value">${d.distance ?? '--'}</div></div>
                     <div class="metric"><div class="metric-label">Cliente</div><div class="metric-value" style="font-size:0.75rem;">${d.client ?? '--'}</div></div>`;
