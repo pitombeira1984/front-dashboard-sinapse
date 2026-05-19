@@ -44,6 +44,7 @@ const onuState = ONU_PROFILES.map(p => ({
     status:          'online',
     rxPower:         p.rxBase,
     txPower:         2.5,
+    sfpTemp:         parseFloat(jitter(45, 3).toFixed(1)),
     latency:         parseFloat((5 + p.distance * 3).toFixed(1)),
     uptimeTicks:     Math.floor(Math.random() * 864000 * 100),
     offlineTimer:    0,
@@ -156,6 +157,11 @@ function tickONUs(elapsed) {
                 ? onu.rxBase - (1 + Math.random() * 2)   // degradação leve: -1 a -3 dBm extra
                 : onu.rxBase;                              // nominal
             onu.rxPower = clamp(drift(onu.rxPower, targetRx, 0.12, 0.25 + onu.distance * 0.1), -30, -10);
+            // TxPower varia suavemente em torno de 2.5 dBm (faixa normal GPON: 0.5–5 dBm)
+            onu.txPower = parseFloat(clamp(drift(onu.txPower, 2.5, 0.05, 0.08), 0.5, 5.0).toFixed(2));
+            // Temperatura do módulo SFP/GBIC — base 45°C, spikes ocasionais de carga
+            const tempSpike = Math.random() < 0.03 ? 15 + Math.random() * 15 : 0;
+            onu.sfpTemp = parseFloat(clamp(drift(onu.sfpTemp, 45 + tempSpike, 0.08, 0.5), 25, 85).toFixed(1));
             onu.latency  = parseFloat(clamp(jitter(5 + onu.distance * 3, 1.5), 2, 80).toFixed(1));
             onu.degraded = onu.rxPower < -24;
             const push = (arr, val) => { arr.push(val); if (arr.length > 120) arr.shift(); };
@@ -207,7 +213,7 @@ function tick() {
     if (oltDev) { oltDev.cpu=cpuNow; oltDev.memory=Math.round((snmpState.memUsed/512)*100); oltDev.temperature=Math.round(jitter(48,2)); oltDev.uptime=uptimeToString(snmpState.uptime); oltDev.onus_active=onusOnline; }
     onuState.forEach(onu => {
         const dev = appState.devices.find(d => d.id === onu.id);
-        if (dev) { dev.status=onu.status; dev.rxPower=onu.rxPower; dev.txPower=onu.txPower; dev.latency=onu.latency; dev.uptime=uptimeToString(onu.uptimeTicks); }
+        if (dev) { dev.status=onu.status; dev.rxPower=onu.rxPower; dev.txPower=onu.txPower; dev.sfpTemp=onu.sfpTemp; dev.latency=onu.latency; dev.uptime=uptimeToString(onu.uptimeTicks); }
     });
 
     return { cpuNow, inRate, outRate, onusOnline, avgRxPower, avgLatency };
@@ -234,7 +240,7 @@ function getSnapshot() {
             nms:      GPON_TOPOLOGY.nms,
             olt:      { ...GPON_TOPOLOGY.olt, cpu:live.cpuNow, memory:Math.round((snmpState.memUsed/512)*100), uptime:uptimeToString(snmpState.uptime) },
             splitter: GPON_TOPOLOGY.splitter,
-            onus:     onuState.map(o => ({ id:o.id, apt:o.apt, client:o.client, serial:o.serial, ip:o.ip, model:o.model, gponPort:o.gponPort, port:`${o.gponPort}:${o.portSlot}`, status:o.status, rxPower:o.rxPower, txPower:o.txPower, latency:o.latency, distance:`${o.distance} km`, uptime:uptimeToString(o.uptimeTicks), degraded:o.degraded, lastSeen:o.lastSeen })),
+            onus:     onuState.map(o => ({ id:o.id, apt:o.apt, client:o.client, serial:o.serial, ip:o.ip, model:o.model, gponPort:o.gponPort, port:`${o.gponPort}:${o.portSlot}`, status:o.status, rxPower:o.rxPower, txPower:o.txPower, sfpTemp:o.sfpTemp, latency:o.latency, distance:`${o.distance} km`, uptime:uptimeToString(o.uptimeTicks), degraded:o.degraded, lastSeen:o.lastSeen })),
         },
         device: { name:'OLT Huawei MA5800-X2', model:'MA5800-X2', firmware:GPON_TOPOLOGY.olt.firmware, serial:GPON_TOPOLOGY.olt.serial, uptime:uptimeToString(snmpState.uptime), uptimeTicks:snmpState.uptime, location:'POP — Av. Principal, 1234', contact:'ti@provedor.com.br' },
         system:  { cpu:live.cpuNow, memUsed:Math.round(snmpState.memUsed), memTotal:512, memPercent:Math.round((snmpState.memUsed/512)*100), temperature:jitter(48,2) },
@@ -264,7 +270,7 @@ function getHistory() {
 }
 
 function getONUs(port) {
-    const all = onuState.map(o => ({ id:o.id, apt:o.apt, client:o.client, serial:o.serial, ip:o.ip, model:o.model, gponPort:o.gponPort, port:`${o.gponPort}:${o.portSlot}`, status:o.status, rxPower:o.rxPower, txPower:o.txPower, latency:o.latency, distance:`${o.distance} km`, uptime:uptimeToString(o.uptimeTicks), degraded:o.degraded, lastSeen:o.lastSeen }));
+    const all = onuState.map(o => ({ id:o.id, apt:o.apt, client:o.client, serial:o.serial, ip:o.ip, model:o.model, gponPort:o.gponPort, port:`${o.gponPort}:${o.portSlot}`, status:o.status, rxPower:o.rxPower, txPower:o.txPower, sfpTemp:o.sfpTemp, latency:o.latency, distance:`${o.distance} km`, uptime:uptimeToString(o.uptimeTicks), degraded:o.degraded, lastSeen:o.lastSeen }));
     return port ? all.filter(o => o.gponPort === port) : all;
 }
 

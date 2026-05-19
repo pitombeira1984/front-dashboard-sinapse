@@ -71,12 +71,17 @@ function renderDeviceCards(devices) {
                     <div class="metric"><div class="metric-label">Memória</div><div class="metric-value">${d.memory ?? '--'}%</div></div>
                     <div class="metric"><div class="metric-label">Temp.</div><div class="metric-value">${d.temperature ?? '--'}°C</div></div>
                     <div class="metric"><div class="metric-label">ONUs Ativas</div><div class="metric-value">${d.onus_active ?? '--'}/${d.onus_total ?? '--'}</div></div>
-                ` : d.type === 'ONU' ? `
+                ` : d.type === 'ONU' ? (() => {
+                    const txColor = d.txPower !== undefined ? (d.txPower < 0.5 || d.txPower > 5 ? 'var(--danger-color)' : d.txPower < 1.0 ? 'var(--warning-color)' : 'var(--success-color)') : '#e2e8f0';
+                    const sfpColor = d.sfpTemp !== undefined ? (d.sfpTemp >= 70 ? 'var(--danger-color)' : d.sfpTemp >= 50 ? 'var(--warning-color)' : 'var(--success-color)') : '#e2e8f0';
+                    return `
                     <div class="metric"><div class="metric-label">RxPower</div><div class="metric-value" style="color:${rxColor};">${d.status === 'online' ? (d.rxPower ?? '--') + ' dBm' : '--'}</div></div>
+                    <div class="metric"><div class="metric-label">TxPower</div><div class="metric-value" style="color:${txColor};">${d.status === 'online' ? (d.txPower ?? '--') + ' dBm' : '--'}</div></div>
+                    <div class="metric"><div class="metric-label">Temp. SFP</div><div class="metric-value" style="color:${sfpColor};">${d.status === 'online' ? (d.sfpTemp ?? '--') + ' °C' : '--'}</div></div>
                     <div class="metric"><div class="metric-label">Latência</div><div class="metric-value">${d.status === 'online' ? (d.latency ?? '--') + ' ms' : '--'}</div></div>
                     <div class="metric"><div class="metric-label">Distância</div><div class="metric-value">${d.distance ?? '--'}</div></div>
-                    <div class="metric"><div class="metric-label">Cliente</div><div class="metric-value" style="font-size:0.75rem;">${d.client ?? '--'}</div></div>
-                ` : d.type === 'Router' ? `
+                    <div class="metric"><div class="metric-label">Cliente</div><div class="metric-value" style="font-size:0.75rem;">${d.client ?? '--'}</div></div>`;
+                })() : d.type === 'Router' ? `
                     <div class="metric"><div class="metric-label">Tráfego IN</div><div class="metric-value">${d.traffic_in ?? '--'} Mbps</div></div>
                     <div class="metric"><div class="metric-label">Tráfego OUT</div><div class="metric-value">${d.traffic_out ?? '--'} Mbps</div></div>
                     <div class="metric"><div class="metric-label">Pacotes/s</div><div class="metric-value">${(d.packets || 0).toLocaleString()}</div></div>

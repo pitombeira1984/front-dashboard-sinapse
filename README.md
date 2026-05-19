@@ -84,7 +84,17 @@ O gráfico de Tráfego possui botões de range (24h / 7d / 30d); ao trocar o ran
 - Lista os alertas não resolvidos do `AlertStorage` com badge de contagem crítica.
 
 **Dispositivos Monitorados**
-- Cards com métricas ao vivo atualizados a cada 5s em sincronia com as KPIs: OLT (CPU, memória, temperatura, ONUs ativas) + ONUs da porta selecionada (status online/offline, RxPower, latência). Os valores exibidos nos cards são a mesma fonte de dados que compõem `avgRxPower` e `avgLatency` nas KPIs.
+- Cards com métricas ao vivo atualizados a cada 5s em sincronia com as KPIs.
+- **OLT:** CPU, Memória, Temperatura interna, ONUs Ativas.
+- **ONUs:** RxPower (colorido por limiar), **TxPower** (potência de transmissão laser da porta), **Temp. SFP** (temperatura do módulo transceptor GBIC/SFP), Latência, Distância, Cliente. Todos os valores com código de cor por faixa operacional:
+
+| Campo | Verde | Amarelo | Vermelho |
+|-------|-------|---------|----------|
+| RxPower | > −24 dBm | −24 a −27 dBm | < −27 dBm |
+| TxPower | 1,0 a 5,0 dBm | 0,5 a 1,0 dBm | < 0,5 ou > 5,0 dBm |
+| Temp. SFP | < 50 °C | 50 a 70 °C | ≥ 70 °C |
+
+- Os valores exibidos nos cards são a mesma fonte de dados que compõem `avgRxPower` e `avgLatency` nas KPIs.
 
 **SNMP Traps**
 - Card de resumo injetado dinamicamente via `renderTrapSummaryCard()`.
@@ -217,7 +227,7 @@ Log de eventos e gerenciamento de backups.
 
 **Backend**
 - Node.js + Express
-- Engine de simulação SNMP (`mock-engine.js`) — topologia GPON com 8 ONUs, estados dinâmicos (offline/online, degradação óptica) e sincronização com `appState.devices`
+- Engine de simulação SNMP (`mock-engine.js`) — topologia GPON com 8 ONUs, estados dinâmicos (offline/online, degradação óptica, variação de TxPower e temperatura do módulo SFP/GBIC) e sincronização com `appState.devices`
 - Engine de SNMP Traps (`trap-engine.js`) — rastreia estado individual por ONU; gera `linkDown`/`linkUp` ao mudar status e `opticalDegradation` quando RxPower < -24 dBm
 - REST API completa com CRUD para dispositivos, alertas, regras, histórico, backups e configurações
 
