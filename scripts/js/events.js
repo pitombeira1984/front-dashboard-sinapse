@@ -871,6 +871,17 @@ function openClientDrawer(onuId) {
             </div>
 
             <div class="drawer-section">
+                <div class="drawer-section-title"><i class="fas fa-shield-alt"></i> Criticidade</div>
+                <div class="drawer-criticality-block" style="background:${crit.bg};border:1px solid ${crit.color}33;">
+                    <i class="fas ${crit.icon}" style="color:${crit.color};font-size:1.5rem;flex-shrink:0;"></i>
+                    <div>
+                        <div style="font-weight:600;color:${crit.color};">${crit.label}</div>
+                        <div style="font-size:0.8rem;color:#94a3b8;">${critDesc}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="drawer-section">
                 <div class="drawer-section-title"><i class="fas fa-map-marker-alt"></i> Endereço</div>
                 <div class="drawer-address">
                     <div>${client.endereco.rua}, ${client.endereco.numero}</div>
@@ -901,17 +912,6 @@ function openClientDrawer(onuId) {
             <div class="drawer-section">
                 <div class="drawer-section-title"><i class="fas fa-wifi"></i> Plano Contratado</div>
                 <div class="drawer-plan-badge"><i class="fas fa-bolt"></i> ${client.plano}</div>
-            </div>
-
-            <div class="drawer-section">
-                <div class="drawer-section-title"><i class="fas fa-shield-alt"></i> Criticidade</div>
-                <div class="drawer-criticality-block" style="background:${crit.bg};border:1px solid ${crit.color}33;">
-                    <i class="fas ${crit.icon}" style="color:${crit.color};font-size:1.5rem;flex-shrink:0;"></i>
-                    <div>
-                        <div style="font-weight:600;color:${crit.color};">${crit.label}</div>
-                        <div style="font-size:0.8rem;color:#94a3b8;">${critDesc}</div>
-                    </div>
-                </div>
             </div>`;
     }).catch(() => {
         if (body) body.innerHTML = `<div style="text-align:center;padding:3rem;color:#64748b;">Erro ao carregar dados do cliente.</div>`;
