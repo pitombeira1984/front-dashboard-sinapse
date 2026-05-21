@@ -98,6 +98,21 @@ O gráfico de Tráfego possui botões de range (24h / 7d / 30d); ao trocar o ran
 
 - Os valores exibidos nos cards são a mesma fonte de dados que compõem `avgRxPower` e `avgLatency` nas KPIs.
 
+**Drawer de Informações do Cliente**
+- O campo **Cliente** em cada card ONU exibe um botão ⓘ. Ao clicar, um painel lateral deslizante (drawer) abre à direita com o cadastro completo do cliente, carregado via `GET /api/clients/:id`.
+- O drawer exibe cinco seções:
+
+| Seção | Conteúdo |
+|-------|----------|
+| Identificação | CPF ou CNPJ, número do contrato, categoria, data de instalação |
+| Criticidade | Bloco colorido com nível (Comum / Prioritário / Crítico) e descrição de SLA |
+| Endereço | Logradouro, complemento, bairro, cidade/estado, CEP e coordenadas GPS |
+| Contato | Telefone e e-mail |
+| Plano Contratado | Velocidade contratada |
+
+- **Níveis de criticidade:** `Comum` (cinza) — residencial/atendimento padrão; `Prioritário` (amarelo) — empresas; `Crítico` (vermelho) — saúde, educação, órgãos públicos — SLA prioritário com alertas imediatos.
+- Fecha ao clicar no botão ×, no overlay escuro ou via teclado. O toast de SNMP fica abaixo do overlay quando o drawer está aberto (hierarquia de z-index: toast 199 < overlay 200 < drawer 201 < modal 1000).
+
 **SNMP Traps**
 - Card de resumo injetado dinamicamente via `renderTrapSummaryCard()`.
 - Polling independente a cada 5s detecta novos traps e exibe toast de notificação.
@@ -231,7 +246,8 @@ Log de eventos e gerenciamento de backups.
 - Node.js + Express
 - Engine de simulação SNMP (`mock-engine.js`) — topologia GPON com 8 ONUs, estados dinâmicos (offline/online, degradação óptica, variação de TxPower e temperatura do módulo SFP/GBIC) e sincronização com `appState.devices`
 - Engine de SNMP Traps (`trap-engine.js`) — rastreia estado individual por ONU; gera `linkDown`/`linkUp` ao mudar status e `opticalDegradation` quando RxPower < -24 dBm
-- REST API completa com CRUD para dispositivos, alertas, regras, histórico, backups e configurações
+- **Cadastro de Clientes** (`CLIENT_PROFILES` em `mock-engine.js`) — 8 clientes com CPF/CNPJ, endereço completo, coordenadas GPS, telefone, e-mail, plano contratado e nível de criticidade (comum / prioritário / crítico)
+- REST API completa com CRUD para dispositivos, alertas, regras, histórico, backups e configurações; endpoints de clientes: `GET /api/clients` e `GET /api/clients/:id`
 
 ---
 
