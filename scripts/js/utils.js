@@ -55,7 +55,7 @@ function showToast(message, type = 'success') {
     const toast = document.createElement('div');
     toast.id    = 'sinapse-toast';
     toast.style.cssText = `
-        position:fixed; bottom:2rem; right:2rem; z-index:9999;
+        position:fixed; bottom:2rem; right:2rem; z-index:199;
         background:#1e293b; border:1px solid #334155;
         border-left:4px solid ${colors[type] || colors.success};
         border-radius:8px; padding:1rem 1.25rem;
