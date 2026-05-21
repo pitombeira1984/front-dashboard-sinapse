@@ -56,6 +56,10 @@ const API = {
     async getGponPorts()         { return this._fetch('/api/gpon/ports'); },
     async getGponKPIs()          { return this._fetch('/api/gpon/kpis'); },
 
+    // ── Clientes ───────────────────────────────────────────────────────────
+    async getClients()  { return this._fetch('/api/clients'); },
+    async getClient(id) { return this._fetch(`/api/clients/${id}`); },
+
     // ── SNMP Traps ─────────────────────────────────────────────────────────
     async getTraps(filters = {}) {
         const params = new URLSearchParams();

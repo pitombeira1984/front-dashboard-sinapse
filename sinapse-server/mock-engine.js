@@ -307,6 +307,21 @@ function getGponPorts() {
     });
 }
 
+// ── Cadastro de Clientes ──────────────────────────────────────────────────────
+const CLIENT_PROFILES = [
+    { id:1, onuId:1,  nome:'João Silva',                   tipo_documento:'cpf',  documento:'123.456.789-01',   telefone:'(85) 9 9801-1011', email:'joao.silva@email.com',       endereco:{ rua:'Av. Senador Virgílio Távora', numero:'1234', complemento:'Apto 101',            bairro:'Aldeota', cidade:'Fortaleza', estado:'CE', cep:'60170-251' }, localizacao:{ lat:-3.7372, lng:-38.5120 }, criticidade:'comum',      categoria:'Residencial', plano:'100 Mbps',  data_instalacao:'15/03/2023', contrato:'CTR-2023-001' },
+    { id:2, onuId:2,  nome:'Maria Oliveira',               tipo_documento:'cpf',  documento:'234.567.890-12',   telefone:'(85) 9 9802-1012', email:'maria.oliveira@email.com',   endereco:{ rua:'Av. Senador Virgílio Távora', numero:'1234', complemento:'Apto 102',            bairro:'Aldeota', cidade:'Fortaleza', estado:'CE', cep:'60170-251' }, localizacao:{ lat:-3.7374, lng:-38.5118 }, criticidade:'comum',      categoria:'Residencial', plano:'200 Mbps',  data_instalacao:'20/04/2023', contrato:'CTR-2023-002' },
+    { id:3, onuId:3,  nome:'Carlos Santos Consultoria Ltda.', tipo_documento:'cnpj', documento:'12.345.678/0001-90', telefone:'(85) 3301-1234', email:'ti@carlossantos.com.br',  endereco:{ rua:'Av. Senador Virgílio Távora', numero:'1234', complemento:'Apto 103 — Escritório', bairro:'Aldeota', cidade:'Fortaleza', estado:'CE', cep:'60170-251' }, localizacao:{ lat:-3.7376, lng:-38.5116 }, criticidade:'prioritário', categoria:'Empresa',     plano:'500 Mbps',  data_instalacao:'10/11/2022', contrato:'CTR-2022-003' },
+    { id:4, onuId:4,  nome:'Ana Costa',                    tipo_documento:'cpf',  documento:'345.678.901-23',   telefone:'(85) 9 9804-1014', email:'ana.costa@email.com',        endereco:{ rua:'Av. Senador Virgílio Távora', numero:'1234', complemento:'Apto 201',            bairro:'Aldeota', cidade:'Fortaleza', estado:'CE', cep:'60170-251' }, localizacao:{ lat:-3.7378, lng:-38.5114 }, criticidade:'comum',      categoria:'Residencial', plano:'100 Mbps',  data_instalacao:'01/06/2023', contrato:'CTR-2023-004' },
+    { id:5, onuId:5,  nome:'Clínica Saúde Vida',           tipo_documento:'cnpj', documento:'23.456.789/0001-01', telefone:'(85) 3302-5050', email:'contato@saudevida.med.br',   endereco:{ rua:'Av. Senador Virgílio Távora', numero:'1234', complemento:'Apto 202 — Clínica',  bairro:'Aldeota', cidade:'Fortaleza', estado:'CE', cep:'60170-251' }, localizacao:{ lat:-3.7380, lng:-38.5112 }, criticidade:'crítico',    categoria:'Saúde',       plano:'1 Gbps',    data_instalacao:'23/05/2022', contrato:'CTR-2022-005' },
+    { id:6, onuId:6,  nome:'Centro de Ensino Avançado',    tipo_documento:'cnpj', documento:'34.567.890/0001-12', telefone:'(85) 3303-6060', email:'ti@ensinoavancado.edu.br',    endereco:{ rua:'Av. Senador Virgílio Távora', numero:'1234', complemento:'Apto 203 — Instituto', bairro:'Aldeota', cidade:'Fortaleza', estado:'CE', cep:'60170-251' }, localizacao:{ lat:-3.7382, lng:-38.5110 }, criticidade:'crítico',    categoria:'Educação',    plano:'500 Mbps',  data_instalacao:'14/07/2022', contrato:'CTR-2022-006' },
+    { id:7, onuId:7,  nome:'Roberto Lima',                 tipo_documento:'cpf',  documento:'456.789.012-34',   telefone:'(85) 9 9807-1017', email:'roberto.lima@email.com',     endereco:{ rua:'Av. Senador Virgílio Távora', numero:'1234', complemento:'Apto 204',            bairro:'Aldeota', cidade:'Fortaleza', estado:'CE', cep:'60170-251' }, localizacao:{ lat:-3.7384, lng:-38.5108 }, criticidade:'comum',      categoria:'Residencial', plano:'300 Mbps',  data_instalacao:'30/09/2023', contrato:'CTR-2023-007' },
+    { id:8, onuId:8,  nome:'Fernanda Rocha',               tipo_documento:'cpf',  documento:'567.890.123-45',   telefone:'(85) 9 9808-1018', email:'fernanda.rocha@email.com',   endereco:{ rua:'Av. Senador Virgílio Távora', numero:'1234', complemento:'Apto 301',            bairro:'Aldeota', cidade:'Fortaleza', estado:'CE', cep:'60170-251' }, localizacao:{ lat:-3.7386, lng:-38.5106 }, criticidade:'comum',      categoria:'Residencial', plano:'100 Mbps',  data_instalacao:'08/01/2024', contrato:'CTR-2024-008' },
+];
+
+function getClients()      { return CLIENT_PROFILES; }
+function getClientById(id) { return CLIENT_PROFILES.find(c => c.id === parseInt(id)) || null; }
+
 // ── CRUD ──────────────────────────────────────────────────────────────────────
 function getDevices()       { return appState.devices; }
 function addDevice(d)       { const item={...d,id:Date.now(),status:d.status||'online'}; appState.devices.push(item); _addHistory({event:'Dispositivo Adicionado',device:d.name,duration:'--',action:`IP: ${d.ip}`,user:'admin',type:'device'}); return item; }
@@ -345,4 +360,5 @@ module.exports = {
     getAppHistory, addHistory,
     getBackups, createBackup, restoreBackup, removeBackup,
     getSettings, saveSettings,
+    getClients, getClientById,
 };

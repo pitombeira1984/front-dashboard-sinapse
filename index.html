@@ -78,6 +78,21 @@
         </div>
     </div>
 
+    <!-- DRAWER DE INFORMAÇÕES DO CLIENTE -->
+    <div class="client-drawer-overlay" id="client-drawer-overlay" onclick="closeClientDrawer()"></div>
+    <aside class="client-drawer" id="client-drawer">
+        <div class="client-drawer-header">
+            <div style="flex:1;min-width:0;">
+                <h2 id="drawer-client-name" style="font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">--</h2>
+                <span id="drawer-criticality-badge" class="badge">--</span>
+            </div>
+            <button class="close-drawer-btn" onclick="closeClientDrawer()" title="Fechar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="client-drawer-body" id="client-drawer-body"></div>
+    </aside>
+
     <!-- DEPENDÊNCIAS EXTERNAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 

@@ -801,6 +801,131 @@ function quickRestoreBackup(id) {
     });
 }
 
+// ===== DRAWER DE INFORMAÇÕES DO CLIENTE =====
+function openClientDrawer(onuId) {
+    const drawer  = document.getElementById('client-drawer');
+    const overlay = document.getElementById('client-drawer-overlay');
+    const body    = document.getElementById('client-drawer-body');
+    const nameEl  = document.getElementById('drawer-client-name');
+    const badge   = document.getElementById('drawer-criticality-badge');
+    if (!drawer) return;
+
+    drawer.classList.add('open');
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    if (nameEl) nameEl.textContent = 'Carregando...';
+    if (badge)  badge.textContent  = '--';
+    if (body)   body.innerHTML = `<div style="text-align:center;padding:3rem;color:#64748b;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem;"></i></div>`;
+
+    API.getClient(onuId).then(client => {
+        if (!client) {
+            if (body) body.innerHTML = `<div style="text-align:center;padding:3rem;color:#64748b;"><i class="fas fa-user-slash" style="font-size:2rem;margin-bottom:1rem;display:block;"></i>Cliente não encontrado.</div>`;
+            return;
+        }
+
+        const critMap = {
+            'comum':      { bg:'rgba(100,116,139,0.15)', color:'#94a3b8', icon:'fa-user',      label:'Comum' },
+            'prioritário':{ bg:'rgba(245,158,11,0.15)',  color:'#f59e0b', icon:'fa-star',      label:'Prioritário' },
+            'crítico':    { bg:'rgba(220,38,38,0.15)',   color:'#dc2626', icon:'fa-heartbeat', label:'Crítico' },
+        };
+        const catIcons = { 'Residencial':'fa-home', 'Empresa':'fa-building', 'Saúde':'fa-hospital', 'Educação':'fa-graduation-cap' };
+        const crit    = critMap[client.criticidade] || critMap['comum'];
+        const catIcon = catIcons[client.categoria] || 'fa-tag';
+
+        if (nameEl) nameEl.textContent = client.nome;
+        if (badge) {
+            badge.textContent       = crit.label;
+            badge.style.background  = crit.bg;
+            badge.style.color       = crit.color;
+            badge.style.border      = `1px solid ${crit.color}55`;
+        }
+
+        const critDesc = client.criticidade === 'crítico'
+            ? `${client.categoria} — SLA prioritário, alertas imediatos`
+            : client.criticidade === 'prioritário'
+            ? `${client.categoria} — Atendimento preferencial`
+            : `${client.categoria} — Atendimento padrão`;
+
+        if (body) body.innerHTML = `
+            <div class="drawer-section">
+                <div class="drawer-section-title"><i class="fas fa-id-card"></i> Identificação</div>
+                <div class="drawer-info-grid">
+                    <div class="drawer-info-item">
+                        <span class="drawer-info-label">${client.tipo_documento === 'cnpj' ? 'CNPJ' : 'CPF'}</span>
+                        <span class="drawer-info-value">${client.documento}</span>
+                    </div>
+                    <div class="drawer-info-item">
+                        <span class="drawer-info-label">Contrato</span>
+                        <span class="drawer-info-value">${client.contrato}</span>
+                    </div>
+                    <div class="drawer-info-item">
+                        <span class="drawer-info-label">Categoria</span>
+                        <span class="drawer-info-value"><i class="fas ${catIcon}" style="margin-right:0.35rem;color:#94a3b8;"></i>${client.categoria}</span>
+                    </div>
+                    <div class="drawer-info-item">
+                        <span class="drawer-info-label">Instalação</span>
+                        <span class="drawer-info-value">${client.data_instalacao}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="drawer-section">
+                <div class="drawer-section-title"><i class="fas fa-map-marker-alt"></i> Endereço</div>
+                <div class="drawer-address">
+                    <div>${client.endereco.rua}, ${client.endereco.numero}</div>
+                    <div>${client.endereco.complemento}</div>
+                    <div>${client.endereco.bairro} — ${client.endereco.cidade} / ${client.endereco.estado}</div>
+                    <div style="color:#64748b;font-size:0.8rem;">CEP: ${client.endereco.cep}</div>
+                </div>
+                <div class="drawer-coords">
+                    <i class="fas fa-crosshairs" style="color:#64748b;margin-right:0.4rem;font-size:0.7rem;"></i>
+                    <span style="font-family:monospace;font-size:0.72rem;color:#64748b;">${client.localizacao.lat}, ${client.localizacao.lng}</span>
+                </div>
+            </div>
+
+            <div class="drawer-section">
+                <div class="drawer-section-title"><i class="fas fa-phone-alt"></i> Contato</div>
+                <div class="drawer-info-grid">
+                    <div class="drawer-info-item">
+                        <span class="drawer-info-label">Telefone</span>
+                        <span class="drawer-info-value">${client.telefone}</span>
+                    </div>
+                    <div class="drawer-info-item">
+                        <span class="drawer-info-label">E-mail</span>
+                        <span class="drawer-info-value" style="font-size:0.78rem;">${client.email}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="drawer-section">
+                <div class="drawer-section-title"><i class="fas fa-wifi"></i> Plano Contratado</div>
+                <div class="drawer-plan-badge"><i class="fas fa-bolt"></i> ${client.plano}</div>
+            </div>
+
+            <div class="drawer-section">
+                <div class="drawer-section-title"><i class="fas fa-shield-alt"></i> Criticidade</div>
+                <div class="drawer-criticality-block" style="background:${crit.bg};border:1px solid ${crit.color}33;">
+                    <i class="fas ${crit.icon}" style="color:${crit.color};font-size:1.5rem;flex-shrink:0;"></i>
+                    <div>
+                        <div style="font-weight:600;color:${crit.color};">${crit.label}</div>
+                        <div style="font-size:0.8rem;color:#94a3b8;">${critDesc}</div>
+                    </div>
+                </div>
+            </div>`;
+    }).catch(() => {
+        if (body) body.innerHTML = `<div style="text-align:center;padding:3rem;color:#64748b;">Erro ao carregar dados do cliente.</div>`;
+    });
+}
+
+function closeClientDrawer() {
+    const drawer  = document.getElementById('client-drawer');
+    const overlay = document.getElementById('client-drawer-overlay');
+    if (drawer)  drawer.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
+    document.body.style.overflow = '';
+}
+
 function removeBackup(id) {
     openModal('Remover Backup', `<p>Tem certeza que deseja remover este backup?</p><p style="color:#94a3b8;font-size:0.875rem;">Esta ação não pode ser desfeita.</p>`, 'Remover', () => {
         BackupStorage.remove(id);

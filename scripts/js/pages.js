@@ -86,7 +86,7 @@ function renderDeviceCards(devices) {
                     <div class="metric"><div class="metric-label">Uptime SFP</div><div class="metric-value" style="font-size:0.75rem;">${d.status === 'online' ? (d.uptime ?? '--') : '--'}</div></div>
                     <div class="metric"><div class="metric-label">Latência</div><div class="metric-value">${d.status === 'online' ? (d.latency ?? '--') + ' ms' : '--'}</div></div>
                     <div class="metric"><div class="metric-label">Distância</div><div class="metric-value">${d.distance ?? '--'}</div></div>
-                    <div class="metric"><div class="metric-label">Cliente</div><div class="metric-value" style="font-size:0.75rem;">${d.client ?? '--'}</div></div>`;
+                    <div class="metric metric-cliente"><div class="metric-label">Cliente</div><div class="metric-value" style="font-size:0.75rem;display:flex;align-items:center;gap:0.4rem;">${d.client ?? '--'}${d.id ? `<button class="client-info-btn" onclick="openClientDrawer(${d.id})" title="Ver informações do cliente"><i class="fas fa-info-circle"></i></button>` : ''}</div></div>`;
                 })() : d.type === 'Router' ? `
                     <div class="metric"><div class="metric-label">Tráfego IN</div><div class="metric-value">${d.traffic_in ?? '--'} Mbps</div></div>
                     <div class="metric"><div class="metric-label">Tráfego OUT</div><div class="metric-value">${d.traffic_out ?? '--'} Mbps</div></div>

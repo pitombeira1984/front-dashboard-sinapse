@@ -27,7 +27,8 @@ const { getSnapshot, getHistory, getONUs, getGponPorts, GPON_TOPOLOGY, GPON_PORT
         getRules, addRule, updateRule, toggleRule, removeRule,
         getAppHistory, addHistory,
         getBackups, createBackup, restoreBackup, removeBackup,
-        getSettings, saveSettings } = require('./mock-engine');
+        getSettings, saveSettings,
+        getClients, getClientById } = require('./mock-engine');
 const traps = require('./trap-engine');
 
 const app  = express();
@@ -284,6 +285,14 @@ app.get('/api/onus/:id',    (req,  res) => {
 });
 app.get('/api/gpon/ports',  (_req, res) => { send(res, { data: getGponPorts() }); });
 app.get('/api/gpon/kpis',   (_req, res) => { send(res, { data: getCachedSnapshot().gpon }); });
+
+// ── Clientes ──────────────────────────────────────────────────────────────────
+app.get('/api/clients',     (_,res)   => send(res, { data: getClients() }));
+app.get('/api/clients/:id', (req,res) => {
+    const client = getClientById(parseInt(req.params.id));
+    if (!client) return res.status(404).json({ ok:false, error:'Cliente não encontrado' });
+    send(res, { data: client });
+});
 
 // ── CRUD Dispositivos ─────────────────────────────────────────────────────────
 app.get('/api/devices',       (_,res)   => send(res, { data: getDevices() }));
