@@ -30,10 +30,10 @@ const GPON_PORTS = [
 const ONU_PROFILES = [
     { id:1, client:'João Silva',     apt:'Apto 101', serial:'HW-ONU-A1B2C301', ip:'10.0.1.101', model:'HG8245Q2', distance:0.3, rxBase:-17.2, gponPort:'0/1/0', portSlot:0 },
     { id:2, client:'Maria Oliveira', apt:'Apto 102', serial:'HW-ONU-A1B2C302', ip:'10.0.1.102', model:'HG8245Q2', distance:0.5, rxBase:-18.1, gponPort:'0/1/0', portSlot:1 },
-    { id:3, client:'Carlos Santos',  apt:'Apto 103', serial:'HW-ONU-A1B2C303', ip:'10.0.1.103', model:'HG8245Q2', distance:0.7, rxBase:-19.3, gponPort:'0/1/0', portSlot:2 },
-    { id:4, client:'Ana Costa',      apt:'Apto 201', serial:'HW-ONU-A1B2C304', ip:'10.0.1.104', model:'HG8245Q2', distance:0.9, rxBase:-20.5, gponPort:'0/1/0', portSlot:3 },
-    { id:5, client:'Pedro Ferreira', apt:'Apto 202', serial:'HW-ONU-A1B2C305', ip:'10.0.1.105', model:'HG8245Q2', distance:1.1, rxBase:-21.8, gponPort:'0/1/1', portSlot:0 },
-    { id:6, client:'Lucia Mendes',   apt:'Apto 203', serial:'HW-ONU-A1B2C306', ip:'10.0.1.106', model:'HG8245Q2', distance:1.3, rxBase:-22.4, gponPort:'0/1/1', portSlot:1 },
+    { id:3, client:'Carlos Santos Consultoria Ltda.', apt:'Apto 103', serial:'HW-ONU-A1B2C303', ip:'10.0.1.103', model:'HG8245Q2', distance:0.7, rxBase:-19.3, gponPort:'0/1/0', portSlot:2 },
+    { id:4, client:'Ana Costa',                      apt:'Apto 201', serial:'HW-ONU-A1B2C304', ip:'10.0.1.104', model:'HG8245Q2', distance:0.9, rxBase:-20.5, gponPort:'0/1/0', portSlot:3 },
+    { id:5, client:'Clínica Saúde Vida',             apt:'Apto 202', serial:'HW-ONU-A1B2C305', ip:'10.0.1.105', model:'HG8245Q2', distance:1.1, rxBase:-21.8, gponPort:'0/1/1', portSlot:0 },
+    { id:6, client:'Centro de Ensino Avançado',      apt:'Apto 203', serial:'HW-ONU-A1B2C306', ip:'10.0.1.106', model:'HG8245Q2', distance:1.3, rxBase:-22.4, gponPort:'0/1/1', portSlot:1 },
     { id:7, client:'Roberto Lima',   apt:'Apto 204', serial:'HW-ONU-A1B2C307', ip:'10.0.1.107', model:'HG8245Q2', distance:1.5, rxBase:-23.1, gponPort:'0/1/1', portSlot:2 },
     { id:8, client:'Fernanda Rocha', apt:'Apto 301', serial:'HW-ONU-A1B2C308', ip:'10.0.1.108', model:'HG8245Q2', distance:1.8, rxBase:-24.2, gponPort:'0/1/2', portSlot:0 },
 ];
