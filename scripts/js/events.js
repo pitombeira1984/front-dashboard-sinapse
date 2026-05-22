@@ -71,18 +71,20 @@ function initDashboardEvents() {
         // Sincronizar Dispositivos Monitorados e gráfico RxPower com estado atual das ONUs
         try {
             const onus = await API.getONUs(AppState.currentGponPort);
-            if (onus && onus.length) {
-                renderONURxPowerChart(onus);
-                const grid = document.getElementById('devices-grid-dashboard');
-                if (grid) {
-                    const oltDevice = {
-                        id: 100, name: 'OLT Huawei MA5800-X2', ip: '10.0.1.10',
-                        type: 'OLT', status: 'online',
-                        cpu: data.cpu, memory: data.memPercent, temperature: data.temperature,
-                        onus_active: data.onusOnline, onus_total: data.onusTotal,
-                    };
+            const grid = document.getElementById('devices-grid-dashboard');
+            if (grid) {
+                const oltDevice = {
+                    id: 100, name: 'OLT Huawei MA5800-X2', ip: '10.0.1.10',
+                    type: 'OLT', status: 'online',
+                    cpu: data.cpu, memory: data.memPercent, temperature: data.temperature,
+                    onus_active: data.onusOnline, onus_total: data.onusTotal,
+                };
+                if (onus && onus.length) {
+                    renderONURxPowerChart(onus);
                     const onuDevices = onus.map(o => ({ ...o, name: `ONU — ${o.apt}`, type: 'ONU' }));
                     grid.innerHTML = renderDeviceCards([oltDevice, ...onuDevices]);
+                } else {
+                    grid.innerHTML = renderDeviceCards([oltDevice]);
                 }
             }
         } catch(e) {}
@@ -153,18 +155,20 @@ function initDashboardEvents() {
                     }
 
                     // Atualizar gráfico de barras RxPower e Dispositivos Monitorados para nova porta
-                    if (onus && onus.length) {
-                        renderONURxPowerChart(onus);
-                        const grid = document.getElementById('devices-grid-dashboard');
-                        if (grid && liveData) {
-                            const oltDevice = {
-                                id: 100, name: 'OLT Huawei MA5800-X2', ip: '10.0.1.10',
-                                type: 'OLT', status: 'online',
-                                cpu: liveData.cpu, memory: liveData.memPercent, temperature: liveData.temperature,
-                                onus_active: liveData.onusOnline, onus_total: liveData.onusTotal,
-                            };
+                    const grid = document.getElementById('devices-grid-dashboard');
+                    if (grid && liveData) {
+                        const oltDevice = {
+                            id: 100, name: 'OLT Huawei MA5800-X2', ip: '10.0.1.10',
+                            type: 'OLT', status: 'online',
+                            cpu: liveData.cpu, memory: liveData.memPercent, temperature: liveData.temperature,
+                            onus_active: liveData.onusOnline, onus_total: liveData.onusTotal,
+                        };
+                        if (onus && onus.length) {
+                            renderONURxPowerChart(onus);
                             const onuDevices = onus.map(o => ({ ...o, name: `ONU — ${o.apt}`, type: 'ONU' }));
                             grid.innerHTML = renderDeviceCards([oltDevice, ...onuDevices]);
+                        } else {
+                            grid.innerHTML = renderDeviceCards([oltDevice]);
                         }
                     }
 
