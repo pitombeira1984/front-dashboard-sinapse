@@ -37,16 +37,14 @@ function initCommonEvents() {
 
 // ===== DASHBOARD =====
 function initDashboardEvents() {
-    // Gráficos de linha inicializados ANTES do polling para garantir estado vazio
-    initTrafficChartEmpty();
-    initOpticalSignalChartEmpty();
+    // Latência GPON inicializada antes do polling para garantir estado vazio
     initLatencyGPONChartEmpty();
-    // Gráfico de barras de RxPower por ONU carregado de forma assíncrona
+    // Gráfico de consumo de banda por OLT — carregado de forma assíncrona
     (async () => {
         try {
-            const port = (typeof AppState !== 'undefined') ? AppState.currentGponPort : null;
-            const onus = await API.getONUs(port);
-            if (onus && onus.length) renderONURxPowerChart(onus);
+            const oltBw = await API.getOLTsBandwidth();
+            const olts  = oltBw?.data ?? oltBw;
+            if (olts && olts.length) renderOLTBandwidthChart(olts);
         } catch(e) {}
     })();
 
@@ -68,9 +66,12 @@ function initDashboardEvents() {
                 ? `<i class="fas fa-exclamation-triangle" style="color:var(--danger-color);"></i> <span style="color:var(--danger-color);">${offline} offline</span>`
                 : `<i class="fas fa-check-circle" style="color:var(--success-color);"></i> <span>Todas online</span>`;
         }
-        // Sincronizar Dispositivos Monitorados e gráfico RxPower com estado atual das ONUs
+        // Sincronizar Dispositivos Monitorados e gráfico de banda por OLT
         try {
-            const onus = await API.getONUs(AppState.currentGponPort);
+            const [onus, oltBw] = await Promise.all([
+                API.getONUs(AppState.currentGponPort),
+                API.getOLTsBandwidth(),
+            ]);
             const grid = document.getElementById('devices-grid-dashboard');
             if (grid) {
                 const oltDevice = {
@@ -80,12 +81,16 @@ function initDashboardEvents() {
                     onus_active: data.onusOnline, onus_total: data.onusTotal,
                 };
                 if (onus && onus.length) {
-                    renderONURxPowerChart(onus);
                     const onuDevices = onus.map(o => ({ ...o, name: `ONU — ${o.apt}`, type: 'ONU' }));
                     grid.innerHTML = renderDeviceCards([oltDevice, ...onuDevices]);
                 } else {
                     grid.innerHTML = renderDeviceCards([oltDevice]);
                 }
+            }
+            const olts = oltBw?.data ?? oltBw;
+            if (olts && olts.length) {
+                if (typeof ChartRegistry !== 'undefined' && ChartRegistry['oltBandwidth']) updateOLTBandwidthChart(olts);
+                else renderOLTBandwidthChart(olts);
             }
         } catch(e) {}
     });

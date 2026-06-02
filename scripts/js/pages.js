@@ -274,43 +274,20 @@ function getDashboardContent() {
 
         <div class="card">
             <div class="section-header">
-                <h2 class="section-title">Tráfego de Rede</h2>
-                <div style="display:flex;gap:0.5rem;">
-                    <button class="chart-range-btn btn btn-secondary" data-range="24h">24h</button>
-                    <button class="chart-range-btn btn" data-range="7d" style="background:transparent;border:1px solid #334155;color:#94a3b8;">7d</button>
-                    <button class="chart-range-btn btn" data-range="30d" style="background:transparent;border:1px solid #334155;color:#94a3b8;">30d</button>
-                </div>
+                <h2 class="section-title">Consumo de Banda por OLT</h2>
+                <span style="font-size:0.75rem;color:#64748b;">
+                    <span style="color:#2563eb;">&#9632;</span> IN &nbsp;
+                    <span style="color:#10b981;">&#9632;</span> OUT &nbsp;&nbsp;
+                    <span style="color:#f59e0b;">&#9632;</span> &gt; 50% &nbsp;
+                    <span style="color:#dc2626;">&#9632;</span> &gt; 80%
+                </span>
             </div>
-            <div style="height:280px;position:relative;"><canvas id="chart-traffic"></canvas></div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
-            <div class="card" style="margin-bottom:0;">
-                <div class="section-header">
-                    <h2 class="section-title">Sinal Óptico Médio</h2>
-                    <span style="font-size:0.75rem;color:#64748b;">
-                        <span style="color:var(--warning-color);">━━</span> -24 dBm &nbsp;
-                        <span style="color:var(--danger-color);">━━</span> -27 dBm
-                    </span>
-                </div>
-                <div style="height:220px;position:relative;"><canvas id="chart-optical-signal"></canvas></div>
-            </div>
-            <div class="card" style="margin-bottom:0;">
-                <div class="section-header"><h2 class="section-title">Latência Média das ONUs</h2></div>
-                <div style="height:220px;position:relative;"><canvas id="chart-latency-gpon"></canvas></div>
-            </div>
+            <div style="height:300px;position:relative;"><canvas id="chart-olt-bandwidth"></canvas></div>
         </div>
 
         <div class="card">
-            <div class="section-header">
-                <h2 class="section-title">RxPower por ONU</h2>
-                <div style="display:flex;gap:1rem;font-size:0.8rem;">
-                    <span><i class="fas fa-circle" style="color:var(--success-color);"></i> Normal (> -24 dBm)</span>
-                    <span><i class="fas fa-circle" style="color:var(--warning-color);"></i> Aviso (-24 a -27 dBm)</span>
-                    <span><i class="fas fa-circle" style="color:var(--danger-color);"></i> Crítico (< -27 dBm)</span>
-                </div>
-            </div>
-            <div style="height:220px;position:relative;"><canvas id="chart-onu-rxpower"></canvas></div>
+            <div class="section-header"><h2 class="section-title">Latência Média das ONUs</h2></div>
+            <div style="height:220px;position:relative;"><canvas id="chart-latency-gpon"></canvas></div>
         </div>
 
         <div class="card">

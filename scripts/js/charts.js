@@ -1,6 +1,5 @@
 // ===== GRÁFICOS COM CHART.JS =====
-// Os gráficos são inicializados com dados históricos reais da API
-// e atualizados em tempo real a cada poll via pushChartPoint().
+// Gráficos inicializados com dados da API e atualizados em tempo real a cada poll.
 
 const ChartRegistry = {};
 
@@ -56,7 +55,6 @@ function randomSeries(count, min, max, smooth = false) {
     return data;
 }
 
-// Gerar label de tempo atual (ex: "18:42:05")
 function nowLabel() {
     return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
@@ -90,231 +88,7 @@ const chartDefaults = {
     }
 };
 
-// Máximo de pontos visíveis nos gráficos em tempo real
 const MAX_LIVE_POINTS = 30;
-
-// ===== PUSH DE NOVO PONTO EM TEMPO REAL =====
-// Chamada pelo applyLiveData() a cada poll (5s)
-function pushChartPoint(liveData) {
-    const label = nowLabel();
-
-    // — Gráfico de Tráfego — (janela deslizante, sempre atualiza independente do range)
-    const trafficChart = ChartRegistry['traffic'];
-    if (trafficChart) {
-        trafficChart.data.labels.push(label);
-        trafficChart.data.datasets[0].data.push(parseFloat((liveData.wanInRate  || 0).toFixed(2)));
-        trafficChart.data.datasets[1].data.push(parseFloat((liveData.wanOutRate || 0).toFixed(2)));
-        if (trafficChart.data.labels.length > MAX_LIVE_POINTS) {
-            trafficChart.data.labels.shift();
-            trafficChart.data.datasets[0].data.shift();
-            trafficChart.data.datasets[1].data.shift();
-        }
-        trafficChart.update('none');
-    }
-}
-
-// ===== INICIALIZAR GRÁFICO VAZIO — TRÁFEGO =====
-function initTrafficChartEmpty() {
-    destroyChart('traffic');
-    const canvas = document.getElementById('chart-traffic');
-    if (!canvas) return;
-    ChartRegistry['traffic'] = new Chart(canvas, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [
-                { label: 'Tráfego IN (Mbps)',  data: [], borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.12)', fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 },
-                { label: 'Tráfego OUT (Mbps)', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 }
-            ]
-        },
-        options: {
-            ...chartDefaults,
-            plugins: { ...chartDefaults.plugins, tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} Mbps` } } },
-            scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, title: { display: true, text: 'Mbps', color: '#64748b' } } }
-        }
-    });
-}
-
-// ===== GRÁFICO DE TRÁFEGO COM DADOS REAIS =====
-function renderTrafficChartFromHistory(history) {
-    destroyChart('traffic');
-    const canvas = document.getElementById('chart-traffic');
-    if (!canvas) return;
-
-    // Gerar labels de tempo para cada ponto do histórico
-    const count    = history.traffic.length;
-    const interval = (history.intervalSeconds || 5) * 1000;
-    const now      = Date.now();
-    const labels   = Array.from({ length: count }, (_, i) => {
-        const t = new Date(now - (count - 1 - i) * interval);
-        return t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    });
-
-    const inData  = history.traffic.map(p => parseFloat((p.in  || 0).toFixed(2)));
-    const outData = history.traffic.map(p => parseFloat((p.out || 0).toFixed(2)));
-
-    ChartRegistry['traffic'] = new Chart(canvas, {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [
-                {
-                    label: 'Tráfego IN (Mbps)',
-                    data: inData,
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37,99,235,0.12)',
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                },
-                {
-                    label: 'Tráfego OUT (Mbps)',
-                    data: outData,
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16,185,129,0.08)',
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                }
-            ]
-        },
-        options: {
-            ...chartDefaults,
-            plugins: {
-                ...chartDefaults.plugins,
-                tooltip: {
-                    ...chartDefaults.plugins.tooltip,
-                    callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} Mbps` }
-                }
-            },
-            scales: {
-                ...chartDefaults.scales,
-                y: {
-                    ...chartDefaults.scales.y,
-                    title: { display: true, text: 'Mbps', color: '#64748b' }
-                }
-            }
-        }
-    });
-}
-
-// ===== GRÁFICO DE LATÊNCIA COM DADOS REAIS =====
-function renderLatencyChartFromHistory(history) {
-    destroyChart('latency');
-    const canvas = document.getElementById('chart-latency');
-    if (!canvas) return;
-
-    const count    = (history.latency || history.traffic).length;
-    const interval = (history.intervalSeconds || 5) * 1000;
-    const now      = Date.now();
-    const labels   = Array.from({ length: count }, (_, i) => {
-        const t = new Date(now - (count - 1 - i) * interval);
-        return t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    });
-
-    const data = (history.latency || []).map(p => parseFloat(p.toFixed(1)));
-
-    ChartRegistry['latency'] = new Chart(canvas, {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Latência (ms)',
-                data,
-                borderColor: '#f59e0b',
-                backgroundColor: 'rgba(245,158,11,0.1)',
-                fill: true,
-                tension: 0.4,
-                pointRadius: 0,
-                pointHoverRadius: 4,
-            }]
-        },
-        options: {
-            ...chartDefaults,
-            plugins: {
-                ...chartDefaults.plugins,
-                tooltip: {
-                    ...chartDefaults.plugins.tooltip,
-                    callbacks: { label: ctx => ` Latência: ${ctx.parsed.y} ms` }
-                }
-            },
-            scales: {
-                ...chartDefaults.scales,
-                y: {
-                    ...chartDefaults.scales.y,
-                    title: { display: true, text: 'ms', color: '#64748b' }
-                }
-            }
-        }
-    });
-}
-
-// ===== GRÁFICO DE TRÁFEGO — FALLBACK SIMULADO =====
-function renderTrafficChart(range = '24h') {
-    destroyChart('traffic');
-    const canvas = document.getElementById('chart-traffic');
-    if (!canvas) return;
-
-    let labels, inData, outData;
-    if (range === '24h') {
-        labels  = generateHourlyLabels(24);
-        inData  = randomSeries(24, 400, 1200, true);
-        outData = randomSeries(24, 350, 1100, true);
-    } else if (range === '7d') {
-        labels  = generateDailyLabels(7);
-        inData  = randomSeries(7, 500, 1100, true);
-        outData = randomSeries(7, 400, 1000, true);
-    } else {
-        labels  = generateMonthlyLabels(30);
-        inData  = randomSeries(30, 450, 1150, true);
-        outData = randomSeries(30, 380, 1050, true);
-    }
-
-    ChartRegistry['traffic'] = new Chart(canvas, {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [
-                {
-                    label: 'Tráfego IN (Mbps)',
-                    data: inData,
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37,99,235,0.12)',
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: range === '24h' ? 2 : 3,
-                    pointHoverRadius: 5,
-                },
-                {
-                    label: 'Tráfego OUT (Mbps)',
-                    data: outData,
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16,185,129,0.08)',
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: range === '24h' ? 2 : 3,
-                    pointHoverRadius: 5,
-                }
-            ]
-        },
-        options: {
-            ...chartDefaults,
-            plugins: {
-                ...chartDefaults.plugins,
-                tooltip: {
-                    ...chartDefaults.plugins.tooltip,
-                    callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} Mbps` }
-                }
-            },
-            scales: {
-                ...chartDefaults.scales,
-                y: { ...chartDefaults.scales.y, title: { display: true, text: 'Mbps', color: '#64748b' } }
-            }
-        }
-    });
-}
 
 // ===== GRÁFICO DE DISPONIBILIDADE =====
 function renderAvailabilityChart() {
@@ -400,33 +174,31 @@ function renderLatencyChart() {
     });
 }
 
-// ===== GRÁFICOS GPON =====
-
-// 1. LINHA — Evolução do sinal óptico médio ao longo do tempo
-function renderOpticalSignalChart(history) {
-    destroyChart('opticalSignal');
-    const canvas = document.getElementById('chart-optical-signal');
+// ===== GRÁFICO DE LATÊNCIA COM DADOS REAIS =====
+function renderLatencyChartFromHistory(history) {
+    destroyChart('latency');
+    const canvas = document.getElementById('chart-latency');
     if (!canvas) return;
 
-    const count    = history?.rxPower?.length || 120;
-    const interval = (history?.intervalSeconds || 5) * 1000;
+    const count    = (history.latency || history.traffic).length;
+    const interval = (history.intervalSeconds || 5) * 1000;
     const now      = Date.now();
-    const labels   = Array.from({length: count}, (_, i) => {
+    const labels   = Array.from({ length: count }, (_, i) => {
         const t = new Date(now - (count - 1 - i) * interval);
-        return t.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        return t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     });
 
-    const data = history?.rxPower || Array.from({length:120}, () => -20 + Math.random() * 4 - 2);
+    const data = (history.latency || []).map(p => parseFloat(p.toFixed(1)));
 
-    ChartRegistry['opticalSignal'] = new Chart(canvas, {
+    ChartRegistry['latency'] = new Chart(canvas, {
         type: 'line',
         data: {
             labels,
             datasets: [{
-                label: 'RxPower Médio (dBm)',
+                label: 'Latência (ms)',
                 data,
-                borderColor: '#2563eb',
-                backgroundColor: 'rgba(37,99,235,0.1)',
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245,158,11,0.1)',
                 fill: true,
                 tension: 0.4,
                 pointRadius: 0,
@@ -437,89 +209,22 @@ function renderOpticalSignalChart(history) {
             ...chartDefaults,
             plugins: {
                 ...chartDefaults.plugins,
-                annotation: undefined,
-                tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` Sinal: ${ctx.parsed.y} dBm` } }
+                tooltip: {
+                    ...chartDefaults.plugins.tooltip,
+                    callbacks: { label: ctx => ` Latência: ${ctx.parsed.y} ms` }
+                }
             },
             scales: {
                 ...chartDefaults.scales,
-                y: {
-                    ...chartDefaults.scales.y,
-                    reverse: true,   // dBm: valores mais negativos = sinal mais fraco (fica embaixo)
-                    title: { display: true, text: 'dBm', color: '#64748b' },
-                    // Linhas de threshold
-                    afterDraw(chart) {
-                        const ctx2 = chart.ctx;
-                        const yAxis = chart.scales.y;
-                        [-24, -27].forEach((val, i) => {
-                            const y = yAxis.getPixelForValue(val);
-                            ctx2.save();
-                            ctx2.strokeStyle = i === 0 ? 'rgba(245,158,11,0.5)' : 'rgba(220,38,38,0.5)';
-                            ctx2.lineWidth   = 1;
-                            ctx2.setLineDash([4, 4]);
-                            ctx2.beginPath();
-                            ctx2.moveTo(chart.chartArea.left, y);
-                            ctx2.lineTo(chart.chartArea.right, y);
-                            ctx2.stroke();
-                            ctx2.restore();
-                        });
-                    }
-                }
+                y: { ...chartDefaults.scales.y, title: { display: true, text: 'ms', color: '#64748b' } }
             }
         }
     });
 }
 
-// 2. BARRA — RxPower atual por ONU
-function renderONURxPowerChart(onus) {
-    destroyChart('onuRxPower');
-    const canvas = document.getElementById('chart-onu-rxpower');
-    if (!canvas) return;
+// ===== GRÁFICOS GPON =====
 
-    const labels = (onus || []).map(o => o.apt?.replace('Apto ', 'Ap.') || `ONU ${o.id}`);
-    const data   = (onus || []).map(o => o.current ?? o.rxPower ?? -20);
-    const colors = data.map(v =>
-        v < -27 ? 'rgba(220,38,38,0.8)'  :   // crítico
-        v < -24 ? 'rgba(245,158,11,0.8)' :   // aviso
-                  'rgba(16,185,129,0.8)'      // normal
-    );
-    const borders = data.map(v =>
-        v < -27 ? '#dc2626' : v < -24 ? '#f59e0b' : '#10b981'
-    );
-
-    ChartRegistry['onuRxPower'] = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [{
-                label: 'RxPower (dBm)',
-                data,
-                backgroundColor: colors,
-                borderColor:     borders,
-                borderWidth: 1,
-                borderRadius: 4,
-            }]
-        },
-        options: {
-            ...chartDefaults,
-            plugins: {
-                ...chartDefaults.plugins,
-                tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` RxPower: ${ctx.parsed.y} dBm` } }
-            },
-            scales: {
-                ...chartDefaults.scales,
-                y: {
-                    ...chartDefaults.scales.y,
-                    reverse: true,
-                    min: -31,
-                    max: -14,
-                    title: { display: true, text: 'dBm', color: '#64748b' },
-                }
-            }
-        }
-    });
-}
-
-// 3. LINHA — Latência média ao longo do tempo
+// LINHA — Latência média ao longo do tempo
 function renderLatencyGPONChart(history) {
     destroyChart('latencyGpon');
     const canvas = document.getElementById('chart-latency-gpon');
@@ -562,16 +267,6 @@ function renderLatencyGPONChart(history) {
 function pushGPONChartPoints(liveData) {
     const label = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
 
-    // Sinal óptico médio
-    const sigChart = ChartRegistry['opticalSignal'];
-    if (sigChart && liveData.avgRxPower) {
-        sigChart.data.labels.push(label);
-        sigChart.data.datasets[0].data.push(parseFloat(liveData.avgRxPower));
-        if (sigChart.data.labels.length > 30) { sigChart.data.labels.shift(); sigChart.data.datasets[0].data.shift(); }
-        sigChart.update('none');
-    }
-
-    // Latência
     const latChart = ChartRegistry['latencyGpon'];
     if (latChart && liveData.avgLatency) {
         latChart.data.labels.push(label);
@@ -579,45 +274,6 @@ function pushGPONChartPoints(liveData) {
         if (latChart.data.labels.length > 30) { latChart.data.labels.shift(); latChart.data.datasets[0].data.shift(); }
         latChart.update('none');
     }
-}
-
-// ===== INICIALIZAR GRÁFICO VAZIO — SINAL ÓPTICO =====
-function initOpticalSignalChartEmpty() {
-    destroyChart('opticalSignal');
-    const canvas = document.getElementById('chart-optical-signal');
-    if (!canvas) return;
-    ChartRegistry['opticalSignal'] = new Chart(canvas, {
-        type: 'line',
-        data: { labels: [], datasets: [{ label: 'RxPower Médio (dBm)', data: [], borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.1)', fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 }] },
-        options: {
-            ...chartDefaults,
-            plugins: { ...chartDefaults.plugins, tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` Sinal: ${ctx.parsed.y} dBm` } } },
-            scales: {
-                ...chartDefaults.scales,
-                y: {
-                    ...chartDefaults.scales.y,
-                    reverse: true,
-                    title: { display: true, text: 'dBm', color: '#64748b' },
-                    afterDraw(chart) {
-                        const ctx2 = chart.ctx;
-                        const yAxis = chart.scales.y;
-                        [-24, -27].forEach((val, i) => {
-                            const y = yAxis.getPixelForValue(val);
-                            ctx2.save();
-                            ctx2.strokeStyle = i === 0 ? 'rgba(245,158,11,0.5)' : 'rgba(220,38,38,0.5)';
-                            ctx2.lineWidth   = 1;
-                            ctx2.setLineDash([4, 4]);
-                            ctx2.beginPath();
-                            ctx2.moveTo(chart.chartArea.left, y);
-                            ctx2.lineTo(chart.chartArea.right, y);
-                            ctx2.stroke();
-                            ctx2.restore();
-                        });
-                    }
-                }
-            }
-        }
-    });
 }
 
 // ===== INICIALIZAR GRÁFICO VAZIO — LATÊNCIA GPON =====
@@ -636,19 +292,105 @@ function initLatencyGPONChartEmpty() {
     });
 }
 
-// ===== INICIALIZAR TODOS OS GRÁFICOS DO DASHBOARD (VAZIOS) =====
+// ===== GRÁFICO DE BARRAS — CONSUMO DE BANDA POR OLT =====
+function renderOLTBandwidthChart(olts) {
+    destroyChart('oltBandwidth');
+    const canvas = document.getElementById('chart-olt-bandwidth');
+    if (!canvas || !olts || !olts.length) return;
+
+    const _inColor   = pct => pct >= 80 ? 'rgba(220,38,38,0.75)'  : pct >= 50 ? 'rgba(245,158,11,0.75)' : 'rgba(37,99,235,0.75)';
+    const _inBorder  = pct => pct >= 80 ? '#dc2626'                : pct >= 50 ? '#f59e0b'               : '#2563eb';
+    const _outColor  = pct => pct >= 80 ? 'rgba(220,38,38,0.65)'  : pct >= 50 ? 'rgba(245,158,11,0.65)' : 'rgba(16,185,129,0.65)';
+    const _outBorder = pct => pct >= 80 ? '#dc2626'                : pct >= 50 ? '#f59e0b'               : '#10b981';
+
+    const inData     = olts.map(o => o.inRate);
+    const outData    = olts.map(o => o.outRate);
+    const inColors   = olts.map(o => _inColor(o.inPct   ?? (o.inRate  / o.capacity * 100)));
+    const inBorders  = olts.map(o => _inBorder(o.inPct  ?? (o.inRate  / o.capacity * 100)));
+    const outColors  = olts.map(o => _outColor(o.outPct  ?? (o.outRate / o.capacity * 100)));
+    const outBorders = olts.map(o => _outBorder(o.outPct ?? (o.outRate / o.capacity * 100)));
+
+    ChartRegistry['oltBandwidth'] = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: olts.map(o => o.name),
+            datasets: [
+                {
+                    label: 'Tráfego IN (Mbps)',
+                    data: inData,
+                    backgroundColor: inColors,
+                    borderColor: inBorders,
+                    borderWidth: 1,
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Tráfego OUT (Mbps)',
+                    data: outData,
+                    backgroundColor: outColors,
+                    borderColor: outBorders,
+                    borderWidth: 1,
+                    borderRadius: 4,
+                },
+            ]
+        },
+        options: {
+            ...chartDefaults,
+            plugins: {
+                ...chartDefaults.plugins,
+                tooltip: {
+                    ...chartDefaults.plugins.tooltip,
+                    callbacks: {
+                        label: ctx => {
+                            const olt = olts[ctx.dataIndex];
+                            const pct = ((ctx.parsed.y / olt.capacity) * 100).toFixed(1);
+                            return ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('pt-BR')} Mbps (${pct}% de ${(olt.capacity / 1000).toFixed(1)} Gbps)`;
+                        },
+                        afterBody: ctx => {
+                            if (!ctx.length) return [];
+                            const olt = olts[ctx[0].dataIndex];
+                            return [`  Capacidade total: ${(olt.capacity / 1000).toFixed(1)} Gbps  •  ${olt.model}`];
+                        }
+                    }
+                }
+            },
+            scales: {
+                ...chartDefaults.scales,
+                y: {
+                    ...chartDefaults.scales.y,
+                    title: { display: true, text: 'Mbps', color: '#64748b' },
+                    ticks: {
+                        color: '#64748b',
+                        callback: v => v >= 1000 ? `${(v / 1000).toFixed(1)} Gbps` : `${v} Mbps`
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateOLTBandwidthChart(olts) {
+    const chart = ChartRegistry['oltBandwidth'];
+    if (!chart || !olts || !olts.length) return;
+
+    const _inColor  = pct => pct >= 80 ? 'rgba(220,38,38,0.75)'  : pct >= 50 ? 'rgba(245,158,11,0.75)' : 'rgba(37,99,235,0.75)';
+    const _outColor = pct => pct >= 80 ? 'rgba(220,38,38,0.65)'  : pct >= 50 ? 'rgba(245,158,11,0.65)' : 'rgba(16,185,129,0.65)';
+
+    chart.data.datasets[0].data            = olts.map(o => o.inRate);
+    chart.data.datasets[0].backgroundColor = olts.map(o => _inColor(o.inPct   ?? (o.inRate  / o.capacity * 100)));
+    chart.data.datasets[1].data            = olts.map(o => o.outRate);
+    chart.data.datasets[1].backgroundColor = olts.map(o => _outColor(o.outPct ?? (o.outRate / o.capacity * 100)));
+    chart.update('none');
+}
+
+// ===== INICIALIZAR TODOS OS GRÁFICOS DO DASHBOARD =====
 async function initDashboardCharts() {
-    // Todos os gráficos de série temporal iniciam vazios — dados chegam pelo polling
-    initTrafficChartEmpty();
-    initOpticalSignalChartEmpty();
     initLatencyGPONChartEmpty();
 
-    // Gráfico de barras de RxPower por ONU — carrega estado atual das ONUs
     if (typeof API !== 'undefined') {
         try {
-            const port = (typeof AppState !== 'undefined') ? AppState.currentGponPort : null;
-            const onus = await API.getONUs(port);
-            if (onus && onus.length) renderONURxPowerChart(onus);
+            const oltBw = await API.getOLTsBandwidth();
+            const olts  = oltBw?.data ?? oltBw;
+            if (olts && olts.length) renderOLTBandwidthChart(olts);
         } catch(e) {}
     }
 }

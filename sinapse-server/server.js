@@ -285,6 +285,23 @@ app.get('/api/onus/:id',    (req,  res) => {
 });
 app.get('/api/gpon/ports',  (_req, res) => { send(res, { data: getGponPorts() }); });
 app.get('/api/gpon/kpis',   (_req, res) => { send(res, { data: getCachedSnapshot().gpon }); });
+app.get('/api/olts/bandwidth', (_req, res) => {
+    const snap = getCachedSnapshot();
+    const gponIf = (snap.interfaces || []).find(i => i.type === 'gpon') || {};
+    const capacity = 2500; // MA5800-X2 GPON: 2.5 Gbps
+    const inRate  = gponIf.inRate  ?? 0;
+    const outRate = gponIf.outRate ?? 0;
+    send(res, { data: [{
+        name:     GPON_TOPOLOGY.olt.name,
+        model:    GPON_TOPOLOGY.olt.model,
+        ip:       GPON_TOPOLOGY.olt.ip,
+        capacity,
+        inRate,
+        outRate,
+        inPct:    parseFloat(((inRate  / capacity) * 100).toFixed(1)),
+        outPct:   parseFloat(((outRate / capacity) * 100).toFixed(1)),
+    }] });
+});
 
 // ── Clientes ──────────────────────────────────────────────────────────────────
 app.get('/api/clients',     (_,res)   => send(res, { data: getClients() }));

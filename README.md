@@ -10,7 +10,7 @@ O SINAPSE é um dashboard de monitoramento preditivo para redes GPON, com foco e
 
 O sistema é composto por **6 páginas funcionais**:
 
-- **Dashboard** — KPIs por porta GPON, gráficos ao vivo (tráfego, sinal óptico, latência, RxPower por ONU) e resumo de SNMP Traps
+- **Dashboard** — KPIs por porta GPON, gráficos ao vivo (consumo de banda por OLT e latência GPON) e resumo de SNMP Traps
 - **Dispositivos** — Tabela de ONUs em tempo real + CRUD completo de dispositivos com filtros e descoberta automática de rede
 - **Alertas** — Gerenciamento de alertas por severidade, SNMP Traps com reconhecimento e regras de notificação configuráveis (Email, Telegram, SMS)
 - **Análise** — Predição de falhas com modelos de IA (Isolation Forest, Regressão Linear, LSTM) e agendamento de manutenções
@@ -57,7 +57,7 @@ Visão geral do estado da rede em tempo real.
 
 **Seletor de Porta GPON**
 - Dropdown no cabeçalho lista todas as portas GPON disponíveis com contagem de ONUs (`online/total`).
-- Ao trocar de porta, todos os KPIs, gráficos de linha e o gráfico de barras de RxPower são reinicializados e recarregados com os dados da nova porta.
+- Ao trocar de porta, todos os KPIs e o gráfico de latência GPON são reinicializados e recarregados com os dados da nova porta.
 
 **KPIs (atualizados a cada 5 segundos)**
 
@@ -73,12 +73,10 @@ Visão geral do estado da rede em tempo real.
 
 | Gráfico | Tipo | Dados |
 |---------|------|-------|
-| Tráfego de Rede | Linha (IN/OUT) | `wanInRate` e `wanOutRate` em Mbps — janela deslizante de 30 pontos |
-| Sinal Óptico Médio | Linha | `avgRxPower` em dBm — linhas de limiar tracejadas em -24 e -27 dBm |
-| Latência Média das ONUs | Linha | `avgLatency` em ms |
-| RxPower por ONU | Barras | Valor atual de cada ONU, colorido por faixa de sinal |
+| Consumo de Banda por OLT | Barras agrupadas (IN/OUT) | `inRate` e `outRate` em Mbps por OLT via `GET /api/olts/bandwidth`; cor proporcional à capacidade (azul < 50%, laranja ≥ 50%, vermelho ≥ 80%) |
+| Latência Média das ONUs | Linha | `avgLatency` em ms — janela deslizante de 30 pontos, atualizado a cada 5s |
 
-O gráfico de Tráfego possui botões de range (24h / 7d / 30d); ao trocar o range os gráficos de linha são reinicializados e o polling os repreenche progressivamente.
+O tooltip do gráfico de banda exibe a taxa em Mbps, o percentual de uso da capacidade total (2.5 Gbps) e o modelo da OLT.
 
 **Alertas Ativos**
 - Lista os alertas não resolvidos do `AlertStorage` com badge de contagem crítica.
@@ -247,7 +245,7 @@ Log de eventos e gerenciamento de backups.
 - Engine de simulação SNMP (`mock-engine.js`) — topologia GPON com 8 ONUs, estados dinâmicos (offline/online, degradação óptica, variação de TxPower e temperatura do módulo SFP/GBIC) e sincronização com `appState.devices`
 - Engine de SNMP Traps (`trap-engine.js`) — rastreia estado individual por ONU; gera `linkDown`/`linkUp` ao mudar status e `opticalDegradation` quando RxPower < -24 dBm
 - **Cadastro de Clientes** (`CLIENT_PROFILES` em `mock-engine.js`) — 8 clientes com CPF/CNPJ, endereço completo, coordenadas GPS, telefone, e-mail, plano contratado e nível de criticidade (comum / prioritário / crítico)
-- REST API completa com CRUD para dispositivos, alertas, regras, histórico, backups e configurações; endpoints de clientes: `GET /api/clients` e `GET /api/clients/:id`
+- REST API completa com CRUD para dispositivos, alertas, regras, histórico, backups e configurações; endpoints de clientes: `GET /api/clients` e `GET /api/clients/:id`; endpoint de banda por OLT: `GET /api/olts/bandwidth` (taxas IN/OUT em Mbps, capacidade e percentuais)
 
 ---
 
