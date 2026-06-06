@@ -21,7 +21,8 @@
 
 const express      = require('express');
 const cors         = require('cors');
-const { getSnapshot, getHistory, getONUs, getGponPorts, GPON_TOPOLOGY, GPON_PORTS, OIDs,
+const { getSnapshot, getHistory, getONUs, getGponPorts, getOLTsBandwidth,
+        GPON_TOPOLOGY, GPON_PORTS, OLTS, OIDs,
         getDevices, addDevice, updateDevice, removeDevice,
         getAlerts, resolveAlert, ignoreAlert, addAlert,
         getRules, addRule, updateRule, toggleRule, removeRule,
@@ -283,24 +284,12 @@ app.get('/api/onus/:id',    (req,  res) => {
     if (!onu) return res.status(404).json({ ok:false, error:'ONU não encontrada' });
     send(res, { data: onu });
 });
-app.get('/api/gpon/ports',  (_req, res) => { send(res, { data: getGponPorts() }); });
-app.get('/api/gpon/kpis',   (_req, res) => { send(res, { data: getCachedSnapshot().gpon }); });
+app.get('/api/gpon/ports',     (_req, res) => { send(res, { data: getGponPorts() }); });
+app.get('/api/gpon/kpis',      (_req, res) => { send(res, { data: getCachedSnapshot().gpon }); });
+app.get('/api/olts',           (_req, res) => { send(res, { data: OLTS }); });
 app.get('/api/olts/bandwidth', (_req, res) => {
-    const snap = getCachedSnapshot();
-    const gponIf = (snap.interfaces || []).find(i => i.type === 'gpon') || {};
-    const capacity = 2500; // MA5800-X2 GPON: 2.5 Gbps
-    const inRate  = gponIf.inRate  ?? 0;
-    const outRate = gponIf.outRate ?? 0;
-    send(res, { data: [{
-        name:     GPON_TOPOLOGY.olt.name,
-        model:    GPON_TOPOLOGY.olt.model,
-        ip:       GPON_TOPOLOGY.olt.ip,
-        capacity,
-        inRate,
-        outRate,
-        inPct:    parseFloat(((inRate  / capacity) * 100).toFixed(1)),
-        outPct:   parseFloat(((outRate / capacity) * 100).toFixed(1)),
-    }] });
+    getCachedSnapshot(); // garante tick antes de ler snmpState.olts
+    send(res, { data: getOLTsBandwidth() });
 });
 
 // ── Clientes ──────────────────────────────────────────────────────────────────
@@ -386,7 +375,7 @@ app.listen(PORT, () => {
     console.log('╠══════════════════════════════════════════════════╣');
     console.log(`║  Rodando em:  http://localhost:${PORT}               ║`);
     console.log('║  Modo:        Mock (dados simulados)             ║');
-    console.log('║  Topografia:  OLT MA5800-X2 → CTO → 8 ONUs      ║');
+    console.log('║  Topografia:  3 OLTs → 8 Portas → 18 ONUs       ║');
     console.log('╠══════════════════════════════════════════════════╣');
     console.log('║  Endpoints disponíveis:                          ║');
     console.log('║  /api/status          → Status do servidor       ║');

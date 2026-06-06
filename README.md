@@ -6,7 +6,9 @@ Dashboard de monitoramento preditivo de redes GPON com interface web em **Vanill
 
 ## Visão Geral
 
-O SINAPSE é um dashboard de monitoramento preditivo para redes GPON, com foco em dispositivos de fibra óptica como ONUs e OLTs (baseado no Huawei EchoLife HG8145X6 / MA5800). A interface exibe em tempo real métricas de potência óptica (RxPower/TxPower), CPU, memória, temperatura, latência e tráfego de rede, com polling automático de 5 segundos.
+O SINAPSE é um dashboard de monitoramento preditivo para redes GPON, com foco em dispositivos de fibra óptica como ONUs e OLTs. A interface exibe em tempo real métricas de potência óptica (RxPower/TxPower), CPU, memória, temperatura, latência e tráfego de rede, com polling automático de 5 segundos.
+
+A topologia simulada representa um provedor real: **3 OLTs** em diferentes POPs, cada uma com múltiplas portas GPON (8 portas no total), cada porta servindo a um grupo de ONUs (18 no total). O gráfico de consumo de banda por OLT exibe dinamicamente todas as OLTs disponíveis na API, sem necessidade de reconfiguração manual.
 
 O sistema é composto por **6 páginas funcionais**:
 
@@ -56,8 +58,9 @@ front-dashboard-sinapse/
 Visão geral do estado da rede em tempo real.
 
 **Seletor de Porta GPON**
-- Dropdown no cabeçalho lista todas as portas GPON disponíveis com contagem de ONUs (`online/total`).
+- Dropdown no cabeçalho lista todas as portas GPON de todas as OLTs com contagem de ONUs (`online/total`), no formato `OLT-XX / GPON X/Y/Z`.
 - Ao trocar de porta, todos os KPIs e o gráfico de latência GPON são reinicializados e recarregados com os dados da nova porta.
+- Portas sem ONUs associadas são exibidas como `(sem ONUs)` e ficam disponíveis para uso futuro.
 
 **KPIs (atualizados a cada 5 segundos)**
 
@@ -73,10 +76,10 @@ Visão geral do estado da rede em tempo real.
 
 | Gráfico | Tipo | Dados |
 |---------|------|-------|
-| Consumo de Banda por OLT | Barras agrupadas (IN/OUT) | `inRate` e `outRate` em Mbps por OLT via `GET /api/olts/bandwidth`; cor proporcional à capacidade (azul < 50%, laranja ≥ 50%, vermelho ≥ 80%) |
+| Consumo de Banda por OLT | Barras agrupadas (IN/OUT) | `inRate` e `outRate` em Mbps por OLT via `GET /api/olts/bandwidth`; número de barras dinâmico — uma barra por OLT disponível na API; cor proporcional à capacidade (azul < 50%, laranja ≥ 50%, vermelho ≥ 80%) |
 | Latência Média das ONUs | Linha | `avgLatency` em ms — janela deslizante de 30 pontos, atualizado a cada 5s |
 
-O tooltip do gráfico de banda exibe a taxa em Mbps, o percentual de uso da capacidade total (2.5 Gbps) e o modelo da OLT.
+O tooltip do gráfico de banda exibe a taxa em Mbps, o percentual de uso da capacidade e o modelo da OLT. OLTs com capacidades diferentes (ex.: 2,5 Gbps vs 10 Gbps) são refletidas automaticamente nos percentuais e no eixo Y.
 
 **Alertas Ativos**
 - Lista os alertas não resolvidos do `AlertStorage` com badge de contagem crítica.
@@ -242,10 +245,29 @@ Log de eventos e gerenciamento de backups.
 
 **Backend**
 - Node.js + Express
-- Engine de simulação SNMP (`mock-engine.js`) — topologia GPON com 8 ONUs, estados dinâmicos (offline/online, degradação óptica, variação de TxPower e temperatura do módulo SFP/GBIC) e sincronização com `appState.devices`
+- Engine de simulação SNMP (`mock-engine.js`) — topologia GPON com **3 OLTs**, **8 portas** e **18 ONUs** distribuídas; estados dinâmicos (offline/online, degradação óptica, variação de TxPower e temperatura do módulo SFP/GBIC) e sincronização com `appState.devices`
+- Banda por OLT calculada independentemente: OLT-01 deriva do tráfego real das ONUs; OLT-02 e OLT-03 evoluem por simulação autônoma com `drift()`, refletindo cargas distintas em tempo real
 - Engine de SNMP Traps (`trap-engine.js`) — rastreia estado individual por ONU; gera `linkDown`/`linkUp` ao mudar status e `opticalDegradation` quando RxPower < -24 dBm
-- **Cadastro de Clientes** (`CLIENT_PROFILES` em `mock-engine.js`) — 8 clientes com CPF/CNPJ, endereço completo, coordenadas GPS, telefone, e-mail, plano contratado e nível de criticidade (comum / prioritário / crítico)
-- REST API completa com CRUD para dispositivos, alertas, regras, histórico, backups e configurações; endpoints de clientes: `GET /api/clients` e `GET /api/clients/:id`; endpoint de banda por OLT: `GET /api/olts/bandwidth` (taxas IN/OUT em Mbps, capacidade e percentuais)
+- **Cadastro de Clientes** (`CLIENT_PROFILES` em `mock-engine.js`) — 8 clientes (ONUs da OLT-01) com CPF/CNPJ, endereço completo, coordenadas GPS, telefone, e-mail, plano contratado e nível de criticidade (comum / prioritário / crítico)
+- REST API completa com CRUD para dispositivos, alertas, regras, histórico, backups e configurações
+  - `GET /api/olts` — lista todas as OLTs do provedor (id, modelo, IP, capacidade, localização)
+  - `GET /api/olts/bandwidth` — consumo de banda por OLT (IN/OUT Mbps, % de carga, capacidade); retorna array dinâmico — basta adicionar uma OLT em `OLTS` para aparecer no gráfico
+  - `GET /api/gpon/ports` — todas as portas GPON de todas as OLTs com estatísticas de ONUs
+  - `GET /api/clients` / `GET /api/clients/:id` — cadastro de clientes
+
+---
+
+## Topologia Simulada
+
+| OLT | Vendor | Modelo | IP | Capacidade | POP | Portas | ONUs |
+|-----|--------|--------|----|-----------|-----|--------|------|
+| OLT-01 | Huawei | MA5800-X2 | 10.0.1.10 | 2,5 Gbps | POP Central | 4 (0/1/0–0/1/3) | 8 |
+| OLT-02 | ZTE | ZXA10 C600 | 10.0.2.10 | 2,5 Gbps | POP Bairro Norte | 2 (0/2/0–0/2/1) | 5 |
+| OLT-03 | Nokia | 7360 FX-4 | 10.0.3.10 | 10 Gbps | POP Bairro Sul | 2 (0/3/0–0/3/1) | 5 |
+
+- As ONUs da **OLT-01** têm cadastro completo de cliente (drawer lateral com CPF/CNPJ, endereço, plano, criticidade).
+- As ONUs da **OLT-02** e **OLT-03** são monitoradas nas tabelas e no seletor de porta, mas sem cadastro de cliente associado.
+- Para adicionar uma nova OLT ao sistema, basta incluir uma entrada no array `OLTS` em `mock-engine.js` — o gráfico de consumo de banda a exibirá automaticamente.
 
 ---
 

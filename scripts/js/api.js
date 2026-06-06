@@ -55,6 +55,7 @@ const API = {
     async getONU(id)             { return this._fetch(`/api/onus/${id}`); },
     async getGponPorts()         { return this._fetch('/api/gpon/ports'); },
     async getGponKPIs()          { return this._fetch('/api/gpon/kpis'); },
+    async getOLTs()              { return this._fetch('/api/olts'); },
     async getOLTsBandwidth()     { return this._fetch('/api/olts/bandwidth'); },
 
     // ── Clientes ───────────────────────────────────────────────────────────
