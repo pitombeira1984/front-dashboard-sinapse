@@ -56,11 +56,11 @@ function showToast(message, type = 'success') {
     toast.id    = 'sinapse-toast';
     toast.style.cssText = `
         position:fixed; bottom:2rem; right:2rem; z-index:199;
-        background:#1e293b; border:1px solid #334155;
+        background:var(--bg-card); border:1px solid var(--border-color);
         border-left:4px solid ${colors[type] || colors.success};
         border-radius:8px; padding:1rem 1.25rem;
         display:flex; align-items:center; gap:0.75rem;
-        color:#e2e8f0; font-size:0.9rem; font-weight:500;
+        color:var(--text-primary); font-size:0.9rem; font-weight:500;
         box-shadow:0 8px 24px rgba(0,0,0,0.4);
         animation:toastIn 0.3s ease; max-width:400px;
     `;
@@ -161,12 +161,12 @@ function viewDeviceMetrics(id) {
     const rows = d.cpu !== undefined
         ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
             ${[['CPU', d.cpu + '%'], ['Memória', d.memory + '%'], ['Temperatura', (d.temperature || '-') + '°C']].map(([k, v]) => `
-                <div style="background:#0f172a;padding:1rem;border-radius:8px;">
-                    <div style="color:#94a3b8;font-size:0.8rem;">${k}</div>
+                <div style="background:var(--bg-base);padding:1rem;border-radius:8px;">
+                    <div style="color:var(--text-secondary);font-size:0.8rem;">${k}</div>
                     <div style="font-size:1.5rem;font-weight:700;">${v}</div>
                 </div>`).join('')}
            </div>`
-        : `<p style="color:#94a3b8;">Métricas detalhadas não disponíveis para este tipo.</p>`;
+        : `<p style="color:var(--text-secondary);">Métricas detalhadas não disponíveis para este tipo.</p>`;
     openModal(`Métricas — ${d.name}`, rows, 'Fechar', closeModal);
 }
 
@@ -190,7 +190,7 @@ function removeDevice(id) {
         <div style="text-align:center;padding:1rem;">
             <i class="fas fa-trash" style="font-size:2.5rem;color:var(--danger-color);margin-bottom:1rem;display:block;"></i>
             <p>Tem certeza que deseja remover <strong>${d.name}</strong>?</p>
-            <p style="color:#94a3b8;font-size:0.875rem;margin-top:0.5rem;">Esta ação não pode ser desfeita.</p>
+            <p style="color:var(--text-secondary);font-size:0.875rem;margin-top:0.5rem;">Esta ação não pode ser desfeita.</p>
         </div>
     `, 'Remover', () => {
         DeviceStorage.remove(id);
@@ -228,16 +228,16 @@ function viewAlertDetails(id) {
     if (!a) return;
     openModal('Detalhes do Alerta', `
         <div style="display:flex;flex-direction:column;gap:1rem;">
-            <div><div style="color:#94a3b8;font-size:0.8rem;margin-bottom:0.25rem;">TÍTULO</div><div style="font-weight:600;">${a.title}</div></div>
-            <div><div style="color:#94a3b8;font-size:0.8rem;margin-bottom:0.25rem;">DESCRIÇÃO</div><div>${a.description}</div></div>
-            <div><div style="color:#94a3b8;font-size:0.8rem;margin-bottom:0.25rem;">DISPOSITIVO</div><div>${a.device}</div></div>
-            <div><div style="color:#94a3b8;font-size:0.8rem;margin-bottom:0.25rem;">STATUS</div>
+            <div><div style="color:var(--text-secondary);font-size:0.8rem;margin-bottom:0.25rem;">TÍTULO</div><div style="font-weight:600;">${a.title}</div></div>
+            <div><div style="color:var(--text-secondary);font-size:0.8rem;margin-bottom:0.25rem;">DESCRIÇÃO</div><div>${a.description}</div></div>
+            <div><div style="color:var(--text-secondary);font-size:0.8rem;margin-bottom:0.25rem;">DISPOSITIVO</div><div>${a.device}</div></div>
+            <div><div style="color:var(--text-secondary);font-size:0.8rem;margin-bottom:0.25rem;">STATUS</div>
                 <span class="badge ${a.severity === 'critical' ? 'badge-critical' : a.severity === 'warning' ? 'badge-warning' : 'badge-success'}">
                     ${a.severity === 'resolved' ? 'Resolvido' : a.severity === 'critical' ? 'Crítico' : a.severity === 'warning' ? 'Aviso' : 'Info'}
                 </span>
             </div>
-            <div><div style="color:#94a3b8;font-size:0.8rem;margin-bottom:0.5rem;">RECOMENDAÇÕES</div>
-                <div style="background:#0f172a;padding:1rem;border-radius:8px;color:#94a3b8;font-size:0.875rem;line-height:1.8;">
+            <div><div style="color:var(--text-secondary);font-size:0.8rem;margin-bottom:0.5rem;">RECOMENDAÇÕES</div>
+                <div style="background:var(--bg-base);padding:1rem;border-radius:8px;color:var(--text-secondary);font-size:0.875rem;line-height:1.8;">
                     1. Verificar conexões físicas<br>
                     2. Reiniciar o equipamento se necessário<br>
                     3. Contatar suporte técnico se persistir
@@ -336,3 +336,39 @@ function downloadBlob(blob, filename) {
     a.click();
     URL.revokeObjectURL(url);
 }
+
+// ===== GERENCIADOR DE TEMA =====
+const ThemeManager = {
+    init() {
+        const saved = Storage.get('theme', 'dark');
+        this.apply(saved);
+        this._updateBtn(saved);
+        document.getElementById('theme-toggle-btn')
+            ?.addEventListener('click', () => this.toggle());
+    },
+
+    toggle() {
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        const next    = current === 'dark' ? 'light' : 'dark';
+        this.apply(next);
+        Storage.set('theme', next);
+        this._updateBtn(next);
+    },
+
+    apply(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+    },
+
+    _updateBtn(theme) {
+        const icon  = document.getElementById('theme-icon');
+        const label = document.getElementById('theme-label');
+        if (!icon) return;
+        if (theme === 'light') {
+            icon.className          = 'fas fa-moon';
+            if (label) label.textContent = 'Tema Escuro';
+        } else {
+            icon.className          = 'fas fa-sun';
+            if (label) label.textContent = 'Tema Claro';
+        }
+    },
+};

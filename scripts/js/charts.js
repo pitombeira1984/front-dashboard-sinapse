@@ -60,33 +60,40 @@ function nowLabel() {
 }
 
 // ===== CONFIGURAÇÃO GLOBAL =====
-const chartDefaults = {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: { duration: 400, easing: 'easeInOutQuart' },
-    plugins: {
-        legend: {
-            labels: { color: '#94a3b8', font: { size: 12 }, boxWidth: 14 }
+function getChartDefaults() {
+    const cs   = getComputedStyle(document.documentElement);
+    const cv   = (v) => cs.getPropertyValue(v).trim();
+    const grid = cv('--chart-grid') || 'rgba(51,65,85,0.4)';
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 400, easing: 'easeInOutQuart' },
+        plugins: {
+            legend: {
+                labels: { color: cv('--text-secondary'), font: { size: 12 }, boxWidth: 14 }
+            },
+            tooltip: {
+                backgroundColor: cv('--bg-card'),
+                borderColor:     cv('--border-color'),
+                borderWidth: 1,
+                titleColor:  cv('--text-primary'),
+                bodyColor:   cv('--text-secondary'),
+            }
         },
-        tooltip: {
-            backgroundColor: '#1e293b',
-            borderColor: '#334155',
-            borderWidth: 1,
-            titleColor: '#e2e8f0',
-            bodyColor: '#94a3b8',
+        scales: {
+            x: {
+                ticks: { color: cv('--text-muted'), maxRotation: 0, maxTicksLimit: 8 },
+                grid:  { color: grid }
+            },
+            y: {
+                ticks: { color: cv('--text-muted') },
+                grid:  { color: grid }
+            }
         }
-    },
-    scales: {
-        x: {
-            ticks: { color: '#64748b', maxRotation: 0, maxTicksLimit: 8 },
-            grid:  { color: 'rgba(51,65,85,0.5)' }
-        },
-        y: {
-            ticks: { color: '#64748b' },
-            grid:  { color: 'rgba(51,65,85,0.5)' }
-        }
-    }
-};
+    };
+}
+
+const getCssVar = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
 const MAX_LIVE_POINTS = 30;
 
@@ -117,17 +124,17 @@ function renderAvailabilityChart() {
             }]
         },
         options: {
-            ...chartDefaults,
+            ...getChartDefaults(),
             plugins: {
-                ...chartDefaults.plugins,
+                ...getChartDefaults().plugins,
                 tooltip: {
-                    ...chartDefaults.plugins.tooltip,
+                    ...getChartDefaults().plugins.tooltip,
                     callbacks: { label: ctx => ` Disponibilidade: ${ctx.parsed.y.toFixed(3)}%` }
                 }
             },
             scales: {
-                ...chartDefaults.scales,
-                y: { ...chartDefaults.scales.y, min: 98.5, max: 100.05, title: { display: true, text: '%', color: '#64748b' } }
+                ...getChartDefaults().scales,
+                y: { ...getChartDefaults().scales.y, min: 98.5, max: 100.05, title: { display: true, text: '%', color: getCssVar('--text-muted') } }
             }
         }
     });
@@ -158,17 +165,17 @@ function renderLatencyChart() {
             }]
         },
         options: {
-            ...chartDefaults,
+            ...getChartDefaults(),
             plugins: {
-                ...chartDefaults.plugins,
+                ...getChartDefaults().plugins,
                 tooltip: {
-                    ...chartDefaults.plugins.tooltip,
+                    ...getChartDefaults().plugins.tooltip,
                     callbacks: { label: ctx => ` Latência: ${ctx.parsed.y} ms` }
                 }
             },
             scales: {
-                ...chartDefaults.scales,
-                y: { ...chartDefaults.scales.y, title: { display: true, text: 'ms', color: '#64748b' } }
+                ...getChartDefaults().scales,
+                y: { ...getChartDefaults().scales.y, title: { display: true, text: 'ms', color: getCssVar('--text-muted') } }
             }
         }
     });
@@ -206,17 +213,17 @@ function renderLatencyChartFromHistory(history) {
             }]
         },
         options: {
-            ...chartDefaults,
+            ...getChartDefaults(),
             plugins: {
-                ...chartDefaults.plugins,
+                ...getChartDefaults().plugins,
                 tooltip: {
-                    ...chartDefaults.plugins.tooltip,
+                    ...getChartDefaults().plugins.tooltip,
                     callbacks: { label: ctx => ` Latência: ${ctx.parsed.y} ms` }
                 }
             },
             scales: {
-                ...chartDefaults.scales,
-                y: { ...chartDefaults.scales.y, title: { display: true, text: 'ms', color: '#64748b' } }
+                ...getChartDefaults().scales,
+                y: { ...getChartDefaults().scales.y, title: { display: true, text: 'ms', color: getCssVar('--text-muted') } }
             }
         }
     });
@@ -256,9 +263,9 @@ function renderLatencyGPONChart(history) {
             }]
         },
         options: {
-            ...chartDefaults,
-            plugins: { ...chartDefaults.plugins, tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` Latência: ${ctx.parsed.y} ms` } } },
-            scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, title: { display:true, text:'ms', color:'#64748b' } } }
+            ...getChartDefaults(),
+            plugins: { ...getChartDefaults().plugins, tooltip: { ...getChartDefaults().plugins.tooltip, callbacks: { label: ctx => ` Latência: ${ctx.parsed.y} ms` } } },
+            scales: { ...getChartDefaults().scales, y: { ...getChartDefaults().scales.y, title: { display:true, text:'ms', color: getCssVar('--text-muted') } } }
         }
     });
 }
@@ -285,9 +292,9 @@ function initLatencyGPONChartEmpty() {
         type: 'line',
         data: { labels: [], datasets: [{ label: 'Latência Média (ms)', data: [], borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 }] },
         options: {
-            ...chartDefaults,
-            plugins: { ...chartDefaults.plugins, tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` Latência: ${ctx.parsed.y} ms` } } },
-            scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, title: { display: true, text: 'ms', color: '#64748b' } } }
+            ...getChartDefaults(),
+            plugins: { ...getChartDefaults().plugins, tooltip: { ...getChartDefaults().plugins.tooltip, callbacks: { label: ctx => ` Latência: ${ctx.parsed.y} ms` } } },
+            scales: { ...getChartDefaults().scales, y: { ...getChartDefaults().scales.y, title: { display: true, text: 'ms', color: getCssVar('--text-muted') } } }
         }
     });
 }
@@ -334,11 +341,11 @@ function renderOLTBandwidthChart(olts) {
             ]
         },
         options: {
-            ...chartDefaults,
+            ...getChartDefaults(),
             plugins: {
-                ...chartDefaults.plugins,
+                ...getChartDefaults().plugins,
                 tooltip: {
-                    ...chartDefaults.plugins.tooltip,
+                    ...getChartDefaults().plugins.tooltip,
                     callbacks: {
                         label: ctx => {
                             const olt = olts[ctx.dataIndex];
@@ -354,12 +361,12 @@ function renderOLTBandwidthChart(olts) {
                 }
             },
             scales: {
-                ...chartDefaults.scales,
+                ...getChartDefaults().scales,
                 y: {
-                    ...chartDefaults.scales.y,
-                    title: { display: true, text: 'Mbps', color: '#64748b' },
+                    ...getChartDefaults().scales.y,
+                    title: { display: true, text: 'Mbps', color: getCssVar('--text-muted') },
                     ticks: {
-                        color: '#64748b',
+                        color: getCssVar('--text-muted'),
                         callback: v => v >= 1000 ? `${(v / 1000).toFixed(1)} Gbps` : `${v} Mbps`
                     }
                 }

@@ -63,11 +63,11 @@ function showTrapToast(trap) {
     toast.id    = 'sinapse-trap-toast';
     toast.style.cssText = `
         position:fixed; bottom:2rem; right:2rem; z-index:9999;
-        background:#1e293b; border:1px solid #334155;
+        background:var(--bg-card); border:1px solid var(--border-color);
         border-left:4px solid ${style.color};
         border-radius:8px; padding:0.875rem 1.25rem;
         display:flex; flex-direction:column; gap:0.25rem;
-        color:#e2e8f0; font-size:0.875rem;
+        color:var(--text-primary); font-size:0.875rem;
         box-shadow:0 8px 32px rgba(0,0,0,0.5);
         animation:toastIn 0.3s ease; max-width:380px; min-width:300px;
         cursor:pointer;
@@ -78,12 +78,12 @@ function showTrapToast(trap) {
             <span style="font-weight:700;font-size:0.8rem;color:${style.color};text-transform:uppercase;letter-spacing:0.05em;">
                 SNMP Trap Recebido
             </span>
-            <span style="margin-left:auto;font-size:0.75rem;color:#64748b;">${trap.time?.split(' ')[1] || 'agora'}</span>
+            <span style="margin-left:auto;font-size:0.75rem;color:var(--text-muted);">${trap.time?.split(' ')[1] || 'agora'}</span>
         </div>
         <div style="font-weight:600;">${trap.label}</div>
-        <div style="color:#94a3b8;font-size:0.8rem;">${trap.description}</div>
+        <div style="color:var(--text-secondary);font-size:0.8rem;">${trap.description}</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.25rem;">
-            <span style="font-size:0.75rem;color:#64748b;">
+            <span style="font-size:0.75rem;color:var(--text-muted);">
                 <i class="fas fa-server" style="margin-right:0.25rem;"></i>${trap.device}
             </span>
             <span style="font-size:0.7rem;color:#475569;">OID: ${trap.oid}</span>
@@ -123,11 +123,11 @@ function renderTrapRow(trap) {
                     ${trap.label}
                     ${!trap.acknowledged ? '<span style="font-size:0.65rem;background:var(--danger-color);color:white;padding:1px 6px;border-radius:4px;margin-left:0.25rem;">NOVO</span>' : ''}
                 </div>
-                <div style="font-size:0.8rem;color:#94a3b8;margin-top:0.2rem;">${trap.description}</div>
+                <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.2rem;">${trap.description}</div>
                 <div style="font-size:0.7rem;color:#475569;margin-top:0.2rem;font-family:monospace;">OID: ${trap.oid}</div>
             </td>
-            <td style="font-size:0.875rem;">${trap.device}<br><span style="font-size:0.75rem;color:#64748b;">${trap.agentAddr}</span></td>
-            <td style="font-size:0.8rem;color:#94a3b8;">${trap.rfc?.split(' — ')[0] || '--'}</td>
+            <td style="font-size:0.875rem;">${trap.device}<br><span style="font-size:0.75rem;color:var(--text-muted);">${trap.agentAddr}</span></td>
+            <td style="font-size:0.8rem;color:var(--text-secondary);">${trap.rfc?.split(' — ')[0] || '--'}</td>
             <td style="font-size:0.875rem;">${trap.time}</td>
             <td>
                 <div class="device-actions">
@@ -148,7 +148,7 @@ function renderTrapRow(trap) {
 // ── Renderizar tabela completa de Traps ───────────────────────────────────────
 function renderTrapsTable(traps) {
     if (!traps || !traps.length) {
-        return `<tr><td colspan="6" style="text-align:center;color:#64748b;padding:2rem;">
+        return `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">
             <i class="fas fa-broadcast-tower" style="font-size:2rem;display:block;margin-bottom:0.5rem;"></i>
             Nenhum SNMP Trap recebido ainda.
         </td></tr>`;
@@ -186,19 +186,19 @@ function renderTrapSummaryCard(stats) {
                     <div style="background:rgba(30,41,59,0.6);padding:1rem;border-radius:8px;text-align:center;">
                         <i class="fas ${icon}" style="color:${color};font-size:1.25rem;display:block;margin-bottom:0.5rem;"></i>
                         <div style="font-size:1.5rem;font-weight:700;color:${color};">${val}</div>
-                        <div style="font-size:0.75rem;color:#94a3b8;">${label}</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);">${label}</div>
                     </div>
                 `).join('')}
             </div>
 
             ${last ? `
                 <div style="background:rgba(30,41,59,0.4);padding:1rem;border-radius:8px;border-left:3px solid ${(TRAP_SEVERITY_STYLE[last.severity] || TRAP_SEVERITY_STYLE.info).color};">
-                    <div style="font-size:0.75rem;color:#64748b;margin-bottom:0.5rem;">ÚLTIMO TRAP RECEBIDO</div>
+                    <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.5rem;">ÚLTIMO TRAP RECEBIDO</div>
                     <div style="display:flex;align-items:center;gap:0.75rem;">
                         <i class="fas fa-broadcast-tower" style="color:${(TRAP_SEVERITY_STYLE[last.severity] || TRAP_SEVERITY_STYLE.info).color};font-size:1.1rem;"></i>
                         <div style="flex:1;">
                             <div style="font-weight:600;">${last.label}</div>
-                            <div style="font-size:0.8rem;color:#94a3b8;">${last.device} • ${last.time}</div>
+                            <div style="font-size:0.8rem;color:var(--text-secondary);">${last.device} • ${last.time}</div>
                         </div>
                         ${!last.acknowledged ? `<button class="btn btn-secondary" style="font-size:0.8rem;" onclick="acknowledgeTrap('${last.id}')"><i class="fas fa-check"></i> OK</button>` : '<span style="color:#10b981;font-size:0.875rem;"><i class="fas fa-check-circle"></i> Reconhecido</span>'}
                     </div>
@@ -267,11 +267,11 @@ function renderTrapsSection(traps, stats) {
             </div>
 
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;">
-                <div style="color:#94a3b8;font-size:0.875rem;" id="traps-count">
+                <div style="color:var(--text-secondary);font-size:0.875rem;" id="traps-count">
                     Mostrando <strong>${traps?.length || 0}</strong> trap(s)
                 </div>
-                <div style="display:flex;gap:1rem;font-size:0.8rem;color:#64748b;">
-                    ${stats ? Object.entries(stats.counters || {}).filter(([,v])=>v>0).map(([k,v])=>`<span>${k}: <strong style="color:#94a3b8;">${v}</strong></span>`).join(' • ') : ''}
+                <div style="display:flex;gap:1rem;font-size:0.8rem;color:var(--text-muted);">
+                    ${stats ? Object.entries(stats.counters || {}).filter(([,v])=>v>0).map(([k,v])=>`<span>${k}: <strong style="color:var(--text-secondary);">${v}</strong></span>`).join(' • ') : ''}
                 </div>
             </div>
         </div>
@@ -339,7 +339,7 @@ async function viewTrapDetails(id) {
                 <i class="fas ${trap.icon || style.icon}" style="color:${style.color};font-size:1.75rem;"></i>
                 <div>
                     <div style="font-weight:700;font-size:1rem;">${trap.label}</div>
-                    <div style="color:#94a3b8;font-size:0.875rem;">${trap.description}</div>
+                    <div style="color:var(--text-secondary);font-size:0.875rem;">${trap.description}</div>
                 </div>
             </div>
 
@@ -354,8 +354,8 @@ async function viewTrapDetails(id) {
                     ['Status',     trap.acknowledged ? 'Reconhecido' : 'Pendente'],
                     ['RFC/MIB',    trap.rfc],
                 ].map(([k,v]) => `
-                    <div style="background:#0f172a;padding:0.75rem;border-radius:6px;">
-                        <div style="color:#64748b;font-size:0.7rem;text-transform:uppercase;margin-bottom:0.25rem;">${k}</div>
+                    <div style="background:var(--bg-base);padding:0.75rem;border-radius:6px;">
+                        <div style="color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;margin-bottom:0.25rem;">${k}</div>
                         <div style="font-size:0.875rem;word-break:break-all;">${v || '--'}</div>
                     </div>
                 `).join('')}
@@ -363,10 +363,10 @@ async function viewTrapDetails(id) {
 
             ${Object.keys(varbinds).length > 0 ? `
                 <div>
-                    <div style="color:#64748b;font-size:0.75rem;text-transform:uppercase;margin-bottom:0.75rem;letter-spacing:0.05em;">
+                    <div style="color:var(--text-muted);font-size:0.75rem;text-transform:uppercase;margin-bottom:0.75rem;letter-spacing:0.05em;">
                         Varbinds (Variáveis SNMP)
                     </div>
-                    <div style="background:#0f172a;padding:1rem;border-radius:6px;font-family:monospace;font-size:0.8rem;line-height:2;">
+                    <div style="background:var(--bg-base);padding:1rem;border-radius:6px;font-family:monospace;font-size:0.8rem;line-height:2;">
                         ${Object.entries(varbinds).map(([k,v]) => `
                             <div style="display:flex;gap:1rem;">
                                 <span style="color:#0ea5e9;min-width:180px;">${k}</span>

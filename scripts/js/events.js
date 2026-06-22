@@ -190,7 +190,7 @@ function initDashboardEvents() {
         btn.addEventListener('click', function () {
             document.querySelectorAll('.chart-range-btn').forEach(b => {
                 b.className = 'chart-range-btn btn';
-                b.style.cssText = 'background:transparent;border:1px solid #334155;color:#94a3b8;';
+                b.style.cssText = 'background:transparent;border:1px solid var(--border-color);color:var(--text-secondary);';
             });
             this.className = 'chart-range-btn btn btn-secondary';
             this.style.cssText = '';
@@ -283,11 +283,11 @@ function initDevicesEvents() {
             if (resultsEl) {
                 resultsEl.style.display = 'block';
                 resultsEl.innerHTML = `
-                    <div style="color:#94a3b8;font-size:0.875rem;margin-bottom:1rem;">
+                    <div style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1rem;">
                         <i class="fas fa-search" style="color:var(--primary-color);margin-right:0.5rem;"></i>
                         Escaneando ${range} via ${protocol.toUpperCase()}...
                     </div>
-                    <div id="scan-progress" style="width:100%;height:6px;background:#334155;border-radius:3px;overflow:hidden;">
+                    <div id="scan-progress" style="width:100%;height:6px;background:var(--bg-elevated);border-radius:3px;overflow:hidden;">
                         <div id="scan-bar" style="width:0%;height:100%;background:var(--primary-color);border-radius:3px;transition:width 0.3s;"></div>
                     </div>`;
             }
@@ -341,25 +341,25 @@ function generateScannedDevices(range) {
 function renderScanResults(devices, container) {
     if (!container) return;
     if (!devices.length) {
-        container.innerHTML += `<div style="color:#94a3b8;font-size:0.875rem;margin-top:1rem;">Nenhum dispositivo novo encontrado na faixa.</div>`;
+        container.innerHTML += `<div style="color:var(--text-secondary);font-size:0.875rem;margin-top:1rem;">Nenhum dispositivo novo encontrado na faixa.</div>`;
         return;
     }
     container.innerHTML = `
         <div style="margin-top:1rem;">
-            <div style="font-weight:600;margin-bottom:0.75rem;color:#e2e8f0;">
+            <div style="font-weight:600;margin-bottom:0.75rem;color:var(--text-primary);">
                 <i class="fas fa-check-circle" style="color:var(--success-color);margin-right:0.5rem;"></i>
                 ${devices.length} dispositivo(s) encontrado(s)
             </div>
             <div style="display:flex;flex-direction:column;gap:0.5rem;">
                 ${devices.map(d => `
-                    <div style="display:flex;align-items:center;justify-content:space-between;background:#0f172a;padding:0.75rem 1rem;border-radius:8px;gap:1rem;flex-wrap:wrap;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-base);padding:0.75rem 1rem;border-radius:8px;gap:1rem;flex-wrap:wrap;">
                         <div style="display:flex;align-items:center;gap:1rem;">
                             <div class="device-status status-${d.status}" style="justify-content:flex-start;">
                                 <i class="fas fa-circle" style="font-size:0.6rem;"></i>
                             </div>
                             <div>
                                 <div style="font-weight:600;font-size:0.9rem;">${d.ip}</div>
-                                <div style="color:#94a3b8;font-size:0.8rem;">${d.name} • ${d.type} • Latência: ${d.latency}</div>
+                                <div style="color:var(--text-secondary);font-size:0.8rem;">${d.name} • ${d.type} • Latência: ${d.latency}</div>
                             </div>
                         </div>
                         <button class="btn btn-secondary" style="font-size:0.8rem;padding:0.35rem 0.75rem;"
@@ -572,7 +572,7 @@ function initAnalysisEvents() {
                     <div style="text-align:center;padding:1rem;">
                         <i class="fas fa-check-circle" style="font-size:3rem;color:var(--success-color);margin-bottom:1rem;display:block;"></i>
                         <h3 style="margin-bottom:1rem;">Análise de IA Concluída</h3>
-                        <div style="color:#94a3b8;line-height:2;">
+                        <div style="color:var(--text-secondary);line-height:2;">
                             <div>• 3 novas previsões identificadas</div>
                             <div>• 2 recomendações geradas</div>
                             <div>• Modelos atualizados com novos dados</div>
@@ -742,7 +742,7 @@ function initHistoryEvents() {
                     <option value="all">Todo o histórico</option>
                 </select>
             </div>
-            <div style="color:#94a3b8;font-size:0.875rem;margin-top:1rem;">
+            <div style="color:var(--text-secondary);font-size:0.875rem;margin-top:1rem;">
                 <i class="fas fa-info-circle" style="margin-right:0.5rem;"></i>
                 CSV e JSON serão baixados automaticamente. PDF abrirá para impressão.
             </div>
@@ -780,7 +780,7 @@ function initHistoryEvents() {
             <div style="text-align:center;padding:1rem;">
                 <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:var(--warning-color);margin-bottom:1rem;display:block;"></i>
                 <p>Restaurar o backup <strong>${backup?.filename}</strong>?</p>
-                <p style="color:#94a3b8;font-size:0.875rem;margin-top:0.5rem;">
+                <p style="color:var(--text-secondary);font-size:0.875rem;margin-top:0.5rem;">
                     Os dados atuais de dispositivos, alertas, regras e configurações serão substituídos pelos dados do backup.
                 </p>
             </div>
@@ -800,7 +800,7 @@ function quickRestoreBackup(id) {
         <div style="text-align:center;padding:1rem;">
             <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:var(--warning-color);margin-bottom:1rem;display:block;"></i>
             <p>Restaurar <strong>${backup?.filename}</strong>?</p>
-            <p style="color:#94a3b8;font-size:0.875rem;margin-top:0.5rem;">Esta ação substituirá os dados atuais.</p>
+            <p style="color:var(--text-secondary);font-size:0.875rem;margin-top:0.5rem;">Esta ação substituirá os dados atuais.</p>
         </div>
     `, 'Restaurar', () => {
         BackupStorage.restore(id);
@@ -825,11 +825,11 @@ function openClientDrawer(onuId) {
 
     if (nameEl) nameEl.textContent = 'Carregando...';
     if (badge)  badge.textContent  = '--';
-    if (body)   body.innerHTML = `<div style="text-align:center;padding:3rem;color:#64748b;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem;"></i></div>`;
+    if (body)   body.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text-muted);"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem;"></i></div>`;
 
     API.getClient(onuId).then(client => {
         if (!client) {
-            if (body) body.innerHTML = `<div style="text-align:center;padding:3rem;color:#64748b;"><i class="fas fa-user-slash" style="font-size:2rem;margin-bottom:1rem;display:block;"></i>Cliente não encontrado.</div>`;
+            if (body) body.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text-muted);"><i class="fas fa-user-slash" style="font-size:2rem;margin-bottom:1rem;display:block;"></i>Cliente não encontrado.</div>`;
             return;
         }
 
@@ -870,7 +870,7 @@ function openClientDrawer(onuId) {
                     </div>
                     <div class="drawer-info-item">
                         <span class="drawer-info-label">Categoria</span>
-                        <span class="drawer-info-value"><i class="fas ${catIcon}" style="margin-right:0.35rem;color:#94a3b8;"></i>${client.categoria}</span>
+                        <span class="drawer-info-value"><i class="fas ${catIcon}" style="margin-right:0.35rem;color:var(--text-secondary);"></i>${client.categoria}</span>
                     </div>
                     <div class="drawer-info-item">
                         <span class="drawer-info-label">Instalação</span>
@@ -885,7 +885,7 @@ function openClientDrawer(onuId) {
                     <i class="fas ${crit.icon}" style="color:${crit.color};font-size:1.5rem;flex-shrink:0;"></i>
                     <div>
                         <div style="font-weight:600;color:${crit.color};">${crit.label}</div>
-                        <div style="font-size:0.8rem;color:#94a3b8;">${critDesc}</div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);">${critDesc}</div>
                     </div>
                 </div>
             </div>
@@ -896,11 +896,11 @@ function openClientDrawer(onuId) {
                     <div>${client.endereco.rua}, ${client.endereco.numero}</div>
                     <div>${client.endereco.complemento}</div>
                     <div>${client.endereco.bairro} — ${client.endereco.cidade} / ${client.endereco.estado}</div>
-                    <div style="color:#64748b;font-size:0.8rem;">CEP: ${client.endereco.cep}</div>
+                    <div style="color:var(--text-muted);font-size:0.8rem;">CEP: ${client.endereco.cep}</div>
                 </div>
                 <div class="drawer-coords">
-                    <i class="fas fa-crosshairs" style="color:#64748b;margin-right:0.4rem;font-size:0.7rem;"></i>
-                    <span style="font-family:monospace;font-size:0.72rem;color:#64748b;">${client.localizacao.lat}, ${client.localizacao.lng}</span>
+                    <i class="fas fa-crosshairs" style="color:var(--text-muted);margin-right:0.4rem;font-size:0.7rem;"></i>
+                    <span style="font-family:monospace;font-size:0.72rem;color:var(--text-muted);">${client.localizacao.lat}, ${client.localizacao.lng}</span>
                 </div>
             </div>
 
@@ -923,7 +923,7 @@ function openClientDrawer(onuId) {
                 <div class="drawer-plan-badge"><i class="fas fa-bolt"></i> ${client.plano}</div>
             </div>`;
     }).catch(() => {
-        if (body) body.innerHTML = `<div style="text-align:center;padding:3rem;color:#64748b;">Erro ao carregar dados do cliente.</div>`;
+        if (body) body.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text-muted);">Erro ao carregar dados do cliente.</div>`;
     });
 }
 
@@ -936,7 +936,7 @@ function closeClientDrawer() {
 }
 
 function removeBackup(id) {
-    openModal('Remover Backup', `<p>Tem certeza que deseja remover este backup?</p><p style="color:#94a3b8;font-size:0.875rem;">Esta ação não pode ser desfeita.</p>`, 'Remover', () => {
+    openModal('Remover Backup', `<p>Tem certeza que deseja remover este backup?</p><p style="color:var(--text-secondary);font-size:0.875rem;">Esta ação não pode ser desfeita.</p>`, 'Remover', () => {
         BackupStorage.remove(id);
         showToast('Backup removido.', 'warning');
         closeModal();
