@@ -36,7 +36,22 @@ const app  = express();
 const PORT = process.env.PORT || 3000;
 
 // ── Middleware ────────────────────────────────────────────────────────────────
-app.use(cors());
+const ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:5500',   // Live Server VS Code
+    'http://127.0.0.1:5500',
+    'https://pitombeira1984.github.io', // GitHub Pages
+];
+app.use(cors({
+    origin: (origin, cb) => {
+        // Permite requisições sem origin (curl, Postman, mobile)
+        if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+        cb(new Error(`CORS bloqueado: ${origin}`));
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type'],
+}));
 app.use(express.json());
 
 // Log de requests

@@ -2,8 +2,16 @@
 // Consome o Mock Server (ou o servidor real no Orange Pi futuramente).
 // Troque apenas API_BASE_URL para apontar para o hardware real.
 
+// URL do servidor: local em desenvolvimento, Railway/Render em produção.
+// Após fazer deploy do backend, substitua o valor de SINAPSE_SERVER_URL abaixo.
+const SINAPSE_SERVER_URL = 'https://COLE-AQUI-A-URL-DO-RAILWAY';
+
 const API = {
-    BASE_URL: 'http://localhost:3000',
+    BASE_URL: (() => {
+        const h = window.location.hostname;
+        if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
+        return SINAPSE_SERVER_URL;
+    })(),
 
     // Intervalo de polling em milissegundos
     POLL_INTERVAL: 5000,
