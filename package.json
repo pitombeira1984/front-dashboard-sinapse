@@ -1,0 +1,17 @@
+{
+  "name": "sinapse-dashboard",
+  "version": "1.0.0",
+  "description": "SINAPSE — Dashboard de Monitoramento Preditivo GPON",
+  "main": "sinapse-server/server.js",
+  "scripts": {
+    "start": "node sinapse-server/server.js",
+    "dev": "nodemon sinapse-server/server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  }
+}

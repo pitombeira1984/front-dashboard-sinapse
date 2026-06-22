@@ -21,6 +21,7 @@
 
 const express      = require('express');
 const cors         = require('cors');
+const path         = require('path');
 const { getSnapshot, getHistory, getONUs, getGponPorts, getOLTsBandwidth,
         GPON_TOPOLOGY, GPON_PORTS, OLTS, OIDs,
         getDevices, addDevice, updateDevice, removeDevice,
@@ -53,6 +54,9 @@ app.use(cors({
     allowedHeaders: ['Content-Type'],
 }));
 app.use(express.json());
+
+// Serve frontend estático (pasta raiz do repositório)
+app.use(express.static(path.join(__dirname, '..')));
 
 // Log de requests
 app.use((req, _res, next) => {
