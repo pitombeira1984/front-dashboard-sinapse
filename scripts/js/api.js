@@ -4,7 +4,7 @@
 
 // URL do servidor: local em desenvolvimento, Railway/Render em produção.
 // Após fazer deploy do backend, substitua o valor de SINAPSE_SERVER_URL abaixo.
-const SINAPSE_SERVER_URL = 'https://COLE-AQUI-A-URL-DO-RAILWAY';
+const SINAPSE_SERVER_URL = 'https://front-dashboard-sinapse-production.up.railway.app';
 
 const API = {
     BASE_URL: (() => {
