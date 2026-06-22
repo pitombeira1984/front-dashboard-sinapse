@@ -28,10 +28,12 @@ O backend simula respostas SNMP reais enquanto o hardware (Orange Pi) não está
 ```
 front-dashboard-sinapse/
 ├── index.html                  ← SPA — ponto de entrada único
+├── package.json                ← Dependências + scripts (usado pelo Railway)
+├── railway.toml                ← Configuração de deploy no Railway
 ├── css/
-│   └── style.css               ← Estilos globais
+│   └── style.css               ← Estilos globais + design tokens (CSS custom properties)
 ├── scripts/js/
-│   ├── api.js                  ← Cliente da API + polling 5s
+│   ├── api.js                  ← Cliente da API + polling 5s + detecção de ambiente
 │   ├── charts.js               ← Módulo Chart.js (gráficos em tempo real)
 │   ├── data.js                 ← Dados de fallback (LocalStorage seed)
 │   ├── events.js               ← Inicialização de eventos por página
@@ -40,9 +42,9 @@ front-dashboard-sinapse/
 │   ├── state.js                ← Gerenciamento de estado global (AppState)
 │   ├── storage.js              ← CRUD via LocalStorage
 │   ├── trap-ui.js              ← UI de SNMP Traps (badges, toasts, painel)
-│   └── utils.js                ← Funções utilitárias (modal, toast, export)
+│   └── utils.js                ← Funções utilitárias (modal, toast, export, ThemeManager)
 └── sinapse-server/             ← Servidor mock (ver README próprio)
-    ├── server.js
+    ├── server.js               ← Serve frontend (express.static) + API REST
     ├── mock-engine.js
     ├── trap-engine.js
     ├── oids.js
@@ -242,6 +244,8 @@ Log de eventos e gerenciamento de backups.
 - SPA com roteamento client-side (`router.js`)
 - Polling de 5 segundos via `api.js` (métricas e traps independentes)
 - LocalStorage como camada de persistência client-side (`storage.js`)
+- **Tema claro/escuro** — 10 CSS custom properties (`--bg-base`, `--bg-card`, `--text-primary` etc.); `ThemeManager` em `utils.js` gerencia toggle e persiste preferência em `localStorage`; script anti-FOUC no `<head>` previne flash ao carregar; gráficos Chart.js leem as variáveis em runtime via `getChartDefaults()`
+- **Responsividade mobile** — breakpoints em 1024 / 768 / 640 / 480 px; modal vira bottom sheet em 480px; navegação com scroll horizontal e touch targets mínimos de 44px
 
 **Backend**
 - Node.js + Express
@@ -271,39 +275,45 @@ Log de eventos e gerenciamento de backups.
 
 ---
 
-## Como Rodar
+## Deploy em Produção
 
-### 1. Iniciar o servidor mock
+O projeto está publicado e acessível publicamente:
+
+| Componente | Plataforma | Observação |
+|-----------|-----------|-----------|
+| Frontend + Backend | [Railway](https://railway.app) | Servidor Express único serve o frontend via `express.static()` e a API em `/api/*` — sem CORS em produção (same-origin) |
+
+Em produção, `api.js` detecta o ambiente automaticamente: `BASE_URL` fica vazio fora do `localhost`, fazendo todas as chamadas irem para o mesmo origin. Em desenvolvimento, aponta para `http://localhost:3000`.
+
+---
+
+## Como Rodar Localmente
+
+### 1. Instalar dependências e iniciar o servidor
+
+Na raiz do projeto:
 
 ```bash
-cd sinapse-server
 npm install
 npm start
 ```
 
-O servidor sobe em `http://localhost:3000`.
+O servidor sobe em `http://localhost:3000` servindo tanto o frontend quanto a API.
 
 Para desenvolvimento com auto-reload:
 ```bash
 npm run dev
 ```
 
-### 2. Abrir o frontend
+### 2. Acessar o frontend
 
-Abra o arquivo `index.html` diretamente no navegador, ou sirva com qualquer servidor estático:
-
-```bash
-# Exemplo com Python
-python -m http.server 8080
-```
-
-Acesse `http://localhost:8080`.
+Abra `http://localhost:3000` no navegador. O Express serve os arquivos estáticos automaticamente.
 
 ---
 
 ## Migração para Hardware Real (Orange Pi)
 
-Quando o Orange Pi estiver disponível, substitua `mock-engine.js` por `snmp-engine.js` em `server.js`:
+Quando o Orange Pi estiver disponível, substitua `mock-engine.js` por `snmp-engine.js` em `sinapse-server/server.js`:
 
 ```js
 // Antes:
@@ -313,7 +323,7 @@ const { getSnapshot, getHistory } = require('./mock-engine');
 const { getSnapshot, getHistory } = require('./snmp-engine');
 ```
 
-O frontend (`api.js`) não precisa de nenhuma alteração — basta garantir que `API.BASE_URL` aponte para o IP do Orange Pi. Veja instruções detalhadas em [`sinapse-server/README.md`](sinapse-server/README.md).
+O frontend (`api.js`) não precisa de nenhuma alteração — em produção, `BASE_URL` já fica vazio (same-origin); em desenvolvimento, basta apontar para o IP do Orange Pi. Veja instruções detalhadas em [`sinapse-server/README.md`](sinapse-server/README.md).
 
 ---
 
