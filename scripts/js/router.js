@@ -49,6 +49,8 @@ function loadPageContent(page) {
 
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', function () {
+    ThemeManager.init();
+
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', function (e) {
             e.preventDefault();

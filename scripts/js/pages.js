@@ -1,6 +1,6 @@
 // ── Renderizar tabela de ONUs ─────────────────────────────────────────────────
 function renderONURows(onus) {
-    if (!onus || !onus.length) return `<tr><td colspan="9" style="text-align:center;color:#64748b;padding:2rem;">Nenhuma ONU encontrada.</td></tr>`;
+    if (!onus || !onus.length) return `<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:2rem;">Nenhuma ONU encontrada.</td></tr>`;
     return onus.map(o => {
         const rxColor = o.rxPower < -27 ? 'var(--danger-color)' : o.rxPower < -24 ? 'var(--warning-color)' : 'var(--success-color)';
         const statusBg = o.status === 'online' ? 'rgba(16,185,129,0.1)' : 'rgba(220,38,38,0.1)';
@@ -9,12 +9,12 @@ function renderONURows(onus) {
         <tr>
             <td>
                 <div style="font-weight:600;">${o.apt}</div>
-                <div style="font-size:0.8rem;color:#94a3b8;">${o.client}</div>
-                <div style="font-size:0.75rem;color:#64748b;">${o.model}</div>
+                <div style="font-size:0.8rem;color:var(--text-secondary);">${o.client}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">${o.model}</div>
             </td>
             <td>
                 <div style="font-size:0.875rem;">${o.ip}</div>
-                <div style="font-size:0.7rem;color:#64748b;font-family:monospace;">${o.serial}</div>
+                <div style="font-size:0.7rem;color:var(--text-muted);font-family:monospace;">${o.serial}</div>
             </td>
             <td style="font-family:monospace;font-size:0.875rem;">${o.port}</td>
             <td>
@@ -25,10 +25,10 @@ function renderONURows(onus) {
                 </span>
             </td>
             <td style="font-weight:600;color:${rxColor};">${o.status === 'online' ? o.rxPower + ' dBm' : '--'}</td>
-            <td style="color:#94a3b8;">${o.status === 'online' ? o.txPower + ' dBm' : '--'}</td>
-            <td style="color:${o.latency > 50 ? 'var(--warning-color)' : '#e2e8f0'};">${o.status === 'online' ? o.latency + ' ms' : '--'}</td>
-            <td style="font-size:0.875rem;color:#94a3b8;">${o.distance}</td>
-            <td style="font-size:0.8rem;color:#94a3b8;">${o.status === 'online' ? o.uptime : '<span style="color:var(--danger-color);">Offline desde ' + o.lastSeen + '</span>'}</td>
+            <td style="color:var(--text-secondary);">${o.status === 'online' ? o.txPower + ' dBm' : '--'}</td>
+            <td style="color:${o.latency > 50 ? 'var(--warning-color)' : 'var(--text-primary)'};">${o.status === 'online' ? o.latency + ' ms' : '--'}</td>
+            <td style="font-size:0.875rem;color:var(--text-secondary);">${o.distance}</td>
+            <td style="font-size:0.8rem;color:var(--text-secondary);">${o.status === 'online' ? o.uptime : '<span style="color:var(--danger-color);">Offline desde ' + o.lastSeen + '</span>'}</td>
         </tr>`;
     }).join('');
 }
@@ -39,7 +39,7 @@ function renderONURows(onus) {
 
 function renderAlertItems(alerts) {
     const active = alerts.filter(a => a.severity !== 'resolved');
-    if (!active.length) return `<div style="text-align:center;color:#64748b;padding:2rem;">Nenhum alerta ativo.</div>`;
+    if (!active.length) return `<div style="text-align:center;color:var(--text-muted);padding:2rem;">Nenhum alerta ativo.</div>`;
     return active.map(a => `
         <div class="alert-item alert-${a.severity}">
             <i class="fas ${a.severity === 'critical' ? 'fa-exclamation-circle' : a.severity === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'} alert-icon"></i>
@@ -52,9 +52,9 @@ function renderAlertItems(alerts) {
 }
 
 function renderDeviceCards(devices) {
-    if (!devices || !devices.length) return `<div style="color:#64748b;padding:1.5rem;text-align:center;grid-column:1/-1;">Nenhum dispositivo encontrado.</div>`;
+    if (!devices || !devices.length) return `<div style="color:var(--text-muted);padding:1.5rem;text-align:center;grid-column:1/-1;">Nenhum dispositivo encontrado.</div>`;
     return devices.map(d => {
-        const rxColor = d.rxPower !== undefined ? (d.rxPower < -27 ? 'var(--danger-color)' : d.rxPower < -24 ? 'var(--warning-color)' : 'var(--success-color)') : '#e2e8f0';
+        const rxColor = d.rxPower !== undefined ? (d.rxPower < -27 ? 'var(--danger-color)' : d.rxPower < -24 ? 'var(--warning-color)' : 'var(--success-color)') : 'var(--text-primary)';
         return `
         <div class="device-card">
             <div class="device-header">
@@ -64,7 +64,7 @@ function renderDeviceCards(devices) {
                     <span>${d.status === 'online' ? 'Online' : 'Offline'}</span>
                 </div>
             </div>
-            <div style="color:#94a3b8;font-size:0.875rem;">IP: ${d.ip} • ${d.type}${d.port ? ' • ' + d.port : ''}</div>
+            <div style="color:var(--text-secondary);font-size:0.875rem;">IP: ${d.ip} • ${d.type}${d.port ? ' • ' + d.port : ''}</div>
             <div class="device-metrics">
                 ${d.type === 'OLT' ? `
                     <div class="metric"><div class="metric-label">CPU</div><div class="metric-value">${d.cpu ?? '--'}%</div></div>
@@ -72,10 +72,10 @@ function renderDeviceCards(devices) {
                     <div class="metric"><div class="metric-label">Temp.</div><div class="metric-value">${d.temperature ?? '--'}°C</div></div>
                     <div class="metric"><div class="metric-label">ONUs Ativas</div><div class="metric-value">${d.onus_active ?? '--'}/${d.onus_total ?? '--'}</div></div>
                 ` : d.type === 'ONU' ? (() => {
-                    const txColor  = d.txPower   !== undefined ? (d.txPower < 0.5 || d.txPower > 5 ? 'var(--danger-color)' : d.txPower < 1.0 ? 'var(--warning-color)' : 'var(--success-color)') : '#e2e8f0';
-                    const sfpColor = d.sfpTemp   !== undefined ? (d.sfpTemp >= 70 ? 'var(--danger-color)' : d.sfpTemp >= 50 ? 'var(--warning-color)' : 'var(--success-color)') : '#e2e8f0';
-                    const vColor   = d.sfpVoltage !== undefined ? (d.sfpVoltage < 3.0 || d.sfpVoltage > 3.6 ? 'var(--danger-color)' : d.sfpVoltage < 3.1 || d.sfpVoltage > 3.5 ? 'var(--warning-color)' : 'var(--success-color)') : '#e2e8f0';
-                    const berColor = d.ber !== undefined ? (d.ber > 1e-6 ? 'var(--danger-color)' : d.ber > 1e-9 ? 'var(--warning-color)' : 'var(--success-color)') : '#e2e8f0';
+                    const txColor  = d.txPower   !== undefined ? (d.txPower < 0.5 || d.txPower > 5 ? 'var(--danger-color)' : d.txPower < 1.0 ? 'var(--warning-color)' : 'var(--success-color)') : 'var(--text-primary)';
+                    const sfpColor = d.sfpTemp   !== undefined ? (d.sfpTemp >= 70 ? 'var(--danger-color)' : d.sfpTemp >= 50 ? 'var(--warning-color)' : 'var(--success-color)') : 'var(--text-primary)';
+                    const vColor   = d.sfpVoltage !== undefined ? (d.sfpVoltage < 3.0 || d.sfpVoltage > 3.6 ? 'var(--danger-color)' : d.sfpVoltage < 3.1 || d.sfpVoltage > 3.5 ? 'var(--warning-color)' : 'var(--success-color)') : 'var(--text-primary)';
+                    const berColor = d.ber !== undefined ? (d.ber > 1e-6 ? 'var(--danger-color)' : d.ber > 1e-9 ? 'var(--warning-color)' : 'var(--success-color)') : 'var(--text-primary)';
                     const berFmt   = v => v === undefined ? '--' : Number(v).toExponential(2);
                     return `
                     <div class="metric"><div class="metric-label">RxPower</div><div class="metric-value" style="color:${rxColor};">${d.status === 'online' ? (d.rxPower ?? '--') + ' dBm' : '--'}</div></div>
@@ -99,10 +99,10 @@ function renderDeviceCards(devices) {
 }
 
 function renderDeviceRows(devices) {
-    if (!devices.length) return `<tr><td colspan="6" style="text-align:center;color:#64748b;padding:2rem;">Nenhum dispositivo encontrado.</td></tr>`;
+    if (!devices.length) return `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">Nenhum dispositivo encontrado.</td></tr>`;
     return devices.map(d => `
         <tr data-device-id="${d.id}">
-            <td><div style="font-weight:600;">${d.name}</div><div style="font-size:0.875rem;color:#94a3b8;">ID: ${d.id}</div></td>
+            <td><div style="font-weight:600;">${d.name}</div><div style="font-size:0.875rem;color:var(--text-secondary);">ID: ${d.id}</div></td>
             <td>${d.ip}</td>
             <td><span class="badge ${d.type === 'OLT' ? 'badge-warning' : d.type === 'Router' ? 'badge-success' : 'badge-critical'}" style="font-size:0.75rem;">${d.type}</span></td>
             <td>
@@ -124,13 +124,13 @@ function renderDeviceRows(devices) {
 }
 
 function renderAlertRows(alerts) {
-    if (!alerts.length) return `<tr><td colspan="6" style="text-align:center;color:#64748b;padding:2rem;">Nenhum alerta encontrado.</td></tr>`;
+    if (!alerts.length) return `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">Nenhum alerta encontrado.</td></tr>`;
     return alerts.map(a => `
         <tr data-alert-id="${a.id}">
             <td><span class="badge ${a.severity === 'critical' ? 'badge-critical' : a.severity === 'warning' ? 'badge-warning' : a.severity === 'resolved' ? 'badge-success' : 'badge-success'}">
                 ${a.severity === 'critical' ? 'Crítico' : a.severity === 'warning' ? 'Aviso' : a.severity === 'resolved' ? 'Resolvido' : 'Info'}
             </span></td>
-            <td><div style="font-weight:600;">${a.title}</div><div style="font-size:0.875rem;color:#94a3b8;">${a.description}</div></td>
+            <td><div style="font-weight:600;">${a.title}</div><div style="font-size:0.875rem;color:var(--text-secondary);">${a.description}</div></td>
             <td>${a.device}</td>
             <td>${a.time}</td>
             <td>${a.resolvedAt || '--'}</td>
@@ -147,11 +147,11 @@ function renderAlertRows(alerts) {
 }
 
 function renderAlertRuleRows(rules) {
-    if (!rules.length) return `<tr><td colspan="5" style="text-align:center;color:#64748b;padding:2rem;">Nenhuma regra cadastrada.</td></tr>`;
+    if (!rules.length) return `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:2rem;">Nenhuma regra cadastrada.</td></tr>`;
     return rules.map(r => `
         <tr data-rule-id="${r.id}">
             <td><div style="font-weight:600;">${r.name}</div></td>
-            <td style="font-size:0.875rem;color:#94a3b8;">${r.condition}</td>
+            <td style="font-size:0.875rem;color:var(--text-secondary);">${r.condition}</td>
             <td style="font-size:0.875rem;">${r.action}</td>
             <td><span class="badge ${r.active ? 'badge-success' : 'badge-critical'}">${r.active ? 'Ativa' : 'Inativa'}</span></td>
             <td>
@@ -169,12 +169,12 @@ function renderAlertRuleRows(rules) {
 }
 
 function renderMaintenanceRows(items) {
-    if (!items.length) return `<tr><td colspan="6" style="text-align:center;color:#64748b;padding:2rem;">Nenhuma manutenção agendada.</td></tr>`;
+    if (!items.length) return `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">Nenhuma manutenção agendada.</td></tr>`;
     return items.map(m => `
         <tr data-maintenance-id="${m.id}">
             <td><div style="font-weight:600;">${m.device}</div></td>
             <td style="font-size:0.875rem;">${m.date} ${m.time || ''}</td>
-            <td style="font-size:0.875rem;color:#94a3b8;">${m.description}</td>
+            <td style="font-size:0.875rem;color:var(--text-secondary);">${m.description}</td>
             <td>${m.duration || '--'}</td>
             <td><span class="badge ${m.status === 'agendado' ? 'badge-warning' : 'badge-success'}">${m.status}</span></td>
             <td>
@@ -188,14 +188,14 @@ function renderMaintenanceRows(items) {
 }
 
 function renderHistoryRows(items) {
-    if (!items.length) return `<tr><td colspan="6" style="text-align:center;color:#64748b;padding:2rem;">Nenhum evento encontrado.</td></tr>`;
+    if (!items.length) return `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">Nenhum evento encontrado.</td></tr>`;
     return items.map(item => `
         <tr>
             <td style="font-size:0.875rem;">${item.time}</td>
-            <td><div style="font-weight:600;">${item.event}</div><div style="font-size:0.75rem;color:#64748b;">ID: ${item.id}</div></td>
+            <td><div style="font-weight:600;">${item.event}</div><div style="font-size:0.75rem;color:var(--text-muted);">ID: ${item.id}</div></td>
             <td>${item.device}</td>
             <td>${item.duration || '--'}</td>
-            <td style="font-size:0.875rem;color:#94a3b8;">${item.action || '--'}</td>
+            <td style="font-size:0.875rem;color:var(--text-secondary);">${item.action || '--'}</td>
             <td>${item.user || 'Sistema'}</td>
         </tr>`).join('');
 }
@@ -217,7 +217,7 @@ function getDashboardContent() {
             </div>
             <div class="header-actions">
                 <div style="display:flex;align-items:center;gap:0.5rem;">
-                    <label style="font-size:0.8rem;color:#94a3b8;white-space:nowrap;">
+                    <label style="font-size:0.8rem;color:var(--text-secondary);white-space:nowrap;">
                         <i class="fas fa-network-wired" style="color:var(--primary-color);margin-right:0.35rem;"></i>Porta GPON:
                     </label>
                     <select id="gpon-port-selector" class="form-control" style="width:160px;font-size:0.85rem;">
@@ -242,7 +242,7 @@ function getDashboardContent() {
                 <div class="kpi-header"><div class="kpi-title">Sinal Médio RxPower</div><i class="fas fa-satellite-dish kpi-icon"></i></div>
                 <div class="kpi-value" id="avg-rxpower" style="font-size:1.5rem;">-- dBm</div>
                 <div class="kpi-trend">
-                    <span style="font-size:0.75rem;color:#64748b;">Limiar crítico: -27 dBm</span>
+                    <span style="font-size:0.75rem;color:var(--text-muted);">Limiar crítico: -27 dBm</span>
                 </div>
             </div>
             <div class="kpi-card">
@@ -256,7 +256,7 @@ function getDashboardContent() {
                 <div class="kpi-header"><div class="kpi-title">Disponibilidade</div><i class="fas fa-signal kpi-icon"></i></div>
                 <div class="kpi-value" id="availability">--%</div>
                 <div class="kpi-trend">
-                    <div style="width:100%;height:6px;background:#334155;border-radius:3px;margin-top:0.5rem;">
+                    <div style="width:100%;height:6px;background:var(--bg-elevated);border-radius:3px;margin-top:0.5rem;">
                         <div id="avail-bar" style="width:0%;height:100%;background:var(--success-color);border-radius:3px;transition:width 0.6s;"></div>
                     </div>
                 </div>
@@ -265,7 +265,7 @@ function getDashboardContent() {
                 <div class="kpi-header"><div class="kpi-title">CPU OLT</div><i class="fas fa-microchip kpi-icon"></i></div>
                 <div class="kpi-value" id="cpu-usage">--%</div>
                 <div class="kpi-trend">
-                    <div style="width:100%;height:6px;background:#334155;border-radius:3px;margin-top:0.5rem;">
+                    <div style="width:100%;height:6px;background:var(--bg-elevated);border-radius:3px;margin-top:0.5rem;">
                         <div id="cpu-bar" style="width:0%;height:100%;background:var(--success-color);border-radius:3px;transition:width 0.4s;"></div>
                     </div>
                 </div>
@@ -275,7 +275,7 @@ function getDashboardContent() {
         <div class="card">
             <div class="section-header">
                 <h2 class="section-title">Consumo de Banda por OLT</h2>
-                <span style="font-size:0.75rem;color:#64748b;">
+                <span style="font-size:0.75rem;color:var(--text-muted);">
                     <span style="color:#2563eb;">&#9632;</span> IN &nbsp;
                     <span style="color:#10b981;">&#9632;</span> OUT &nbsp;&nbsp;
                     <span style="color:#f59e0b;">&#9632;</span> &gt; 50% &nbsp;
@@ -304,7 +304,7 @@ function getDashboardContent() {
                 <button class="btn btn-secondary" id="add-device-btn"><i class="fas fa-plus"></i> Adicionar Dispositivo</button>
             </div>
             <div class="devices-grid" id="devices-grid-dashboard">
-                <div style="color:#64748b;padding:1.5rem;text-align:center;grid-column:1/-1;">
+                <div style="color:var(--text-muted);padding:1.5rem;text-align:center;grid-column:1/-1;">
                     <i class="fas fa-spinner fa-spin" style="margin-right:0.5rem;"></i> Carregando dispositivos...
                 </div>
             </div>
@@ -361,14 +361,14 @@ function getDevicesContent() {
                 </table>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;">
-                <div style="color:#94a3b8;font-size:0.875rem;" id="devices-count">Mostrando <strong>${devices.length}</strong> dispositivo(s)</div>
+                <div style="color:var(--text-secondary);font-size:0.875rem;" id="devices-count">Mostrando <strong>${devices.length}</strong> dispositivo(s)</div>
                 <button class="btn btn-secondary" onclick="resetDevices()"><i class="fas fa-undo"></i> Resetar dados</button>
             </div>
         </div>
 
         <div class="card">
             <div class="section-header"><h2 class="section-title">Descoberta Automática</h2></div>
-            <div style="background:rgba(30,41,59,0.5);padding:1.5rem;border-radius:var(--border-radius);">
+            <div style="background:var(--bg-surface);padding:1.5rem;border-radius:var(--border-radius);">
                 <div style="display:flex;gap:1rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap;">
                     <input type="text" id="scan-range" class="form-control" placeholder="Faixa de IP (ex: 10.0.1.0/24)" value="10.0.1.0/24" style="flex:1;min-width:200px;">
                     <select id="scan-protocol" class="form-control" style="width:140px;">
@@ -378,7 +378,7 @@ function getDevicesContent() {
                     </select>
                     <button class="btn btn-success" id="scan-btn"><i class="fas fa-search"></i> Escanear Rede</button>
                 </div>
-                <div style="color:#94a3b8;font-size:0.875rem;">O SINAPSE escaneia sua rede para encontrar dispositivos compatíveis automaticamente.</div>
+                <div style="color:var(--text-secondary);font-size:0.875rem;">O SINAPSE escaneia sua rede para encontrar dispositivos compatíveis automaticamente.</div>
                 <div id="scan-results" style="margin-top:1rem;display:none;"></div>
             </div>
         </div>`;
@@ -404,7 +404,7 @@ function getAlertsContent() {
                 <button class="filter-btn ${AppState.currentAlertFilter === f ? 'active' : ''}" data-filter="${f}">
                     <i class="fas ${f === 'all' ? 'fa-list' : f === 'critical' ? 'fa-exclamation-circle' : f === 'warning' ? 'fa-exclamation-triangle' : f === 'info' ? 'fa-info-circle' : 'fa-check-circle'}"></i>
                     ${f === 'all' ? 'Todos' : f === 'critical' ? 'Críticos' : f === 'warning' ? 'Avisos' : f === 'info' ? 'Info' : 'Resolvidos'}
-                    <span class="badge" style="margin-left:0.25rem;${f === 'critical' ? 'background:rgba(220,38,38,0.15);color:#dc2626;border:1px solid rgba(220,38,38,0.3);' : f === 'warning' ? 'background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);' : f === 'resolved' ? 'background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);' : 'background:#334155;color:#e2e8f0;'}">
+                    <span class="badge" style="margin-left:0.25rem;${f === 'critical' ? 'background:rgba(220,38,38,0.15);color:#dc2626;border:1px solid rgba(220,38,38,0.3);' : f === 'warning' ? 'background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);' : f === 'resolved' ? 'background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);' : 'background:var(--bg-elevated);color:var(--text-primary);'}">
                         ${f === 'all' ? alerts.length : alerts.filter(a => a.severity === f).length}
                     </span>
                 </button>`).join('')}
@@ -425,7 +425,7 @@ function getAlertsContent() {
                 </table>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;">
-                <div style="color:#94a3b8;font-size:0.875rem;" id="alerts-count">Mostrando <strong>${alerts.length}</strong> alerta(s)</div>
+                <div style="color:var(--text-secondary);font-size:0.875rem;" id="alerts-count">Mostrando <strong>${alerts.length}</strong> alerta(s)</div>
                 <button class="btn btn-secondary" onclick="resetAlerts()"><i class="fas fa-undo"></i> Resetar dados</button>
             </div>
         </div>
@@ -524,9 +524,9 @@ function getAnalysisContent() {
                 </div>
                 <div>
                     <h3 style="margin-bottom:1rem;font-size:1.125rem;">Recomendações de Ação</h3>
-                    <div style="background:rgba(30,41,59,0.5);padding:1rem;border-radius:var(--border-radius);">
+                    <div style="background:var(--bg-surface);padding:1rem;border-radius:var(--border-radius);">
                         <div style="font-weight:600;margin-bottom:0.5rem;">Para OLT-01:</div>
-                        <div style="color:#94a3b8;font-size:0.875rem;margin-bottom:1rem;">
+                        <div style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1rem;">
                             1. Verificar fusão na porta 1/0/8<br>
                             2. Limpar conectores ópticos<br>
                             3. Agendar manutenção preventiva
@@ -558,15 +558,15 @@ function getAnalysisContent() {
                 ${[['Isolation Forest','Detecção de anomalias em séries temporais','92.3'],
                    ['Regressão Linear','Predição de degradação óptica','88.7'],
                    ['LSTM Network','Previsão de tráfego de rede','85.1']].map(([name, desc, acc]) => `
-                    <div style="background:rgba(30,41,59,0.5);padding:1.5rem;border-radius:var(--border-radius);">
+                    <div style="background:var(--bg-surface);padding:1.5rem;border-radius:var(--border-radius);">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
                             <div style="font-weight:600;">${name}</div>
                             <span class="badge badge-success">Ativo</span>
                         </div>
-                        <div style="color:#94a3b8;font-size:0.875rem;margin-bottom:1rem;">${desc}</div>
+                        <div style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1rem;">${desc}</div>
                         <div style="font-size:0.875rem;">
                             <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;"><span>Precisão:</span><span>${acc}%</span></div>
-                            <div style="width:100%;height:6px;background:#334155;border-radius:3px;">
+                            <div style="width:100%;height:6px;background:var(--bg-elevated);border-radius:3px;">
                                 <div style="width:${acc}%;height:100%;background:var(--success-color);border-radius:3px;"></div>
                             </div>
                         </div>
@@ -633,7 +633,7 @@ function getSettingsContent() {
                 </div>
                 <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
                     <label class="toggle-switch"><input type="checkbox" id="cfg-advancedMetrics" ${s.advancedMetrics ? 'checked' : ''}><span class="toggle-slider"></span></label>
-                    <div><div style="font-weight:600;">Coleta Avançada de Métricas</div><div style="color:#94a3b8;font-size:0.875rem;">Coleta detalhada de métricas de performance</div></div>
+                    <div><div style="font-weight:600;">Coleta Avançada de Métricas</div><div style="color:var(--text-secondary);font-size:0.875rem;">Coleta detalhada de métricas de performance</div></div>
                 </div>
             </div>
         </div>
@@ -647,7 +647,7 @@ function getSettingsContent() {
                         ${[['notifyEmail','Email','Alertas por email'],['notifyTelegram','Telegram Bot','Notificações no Telegram'],['notifySMS','SMS','Alertas por SMS (críticos apenas)']].map(([id,label,desc]) => `
                         <div style="display:flex;align-items:center;gap:1rem;">
                             <label class="toggle-switch"><input type="checkbox" id="cfg-${id}" ${s[id] ? 'checked' : ''}><span class="toggle-slider"></span></label>
-                            <div><div style="font-weight:600;">${label}</div><div style="color:#94a3b8;font-size:0.875rem;">${desc}</div></div>
+                            <div><div style="font-weight:600;">${label}</div><div style="color:var(--text-secondary);font-size:0.875rem;">${desc}</div></div>
                         </div>`).join('')}
                     </div>
                 </div>
@@ -671,7 +671,7 @@ function getSettingsContent() {
                         <input type="text" class="form-control" id="cfg-dns2" value="${s.dns2}" placeholder="DNS Secundário">
                     </div>
                 </div>
-                <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid #334155;">
+                <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border-color);">
                     <h3 style="margin-bottom:1rem;color:var(--danger-color);">Zona de Perigo</h3>
                     <button class="btn btn-danger" style="margin-right:1rem;"><i class="fas fa-redo"></i> Reiniciar Serviços</button>
                     <button class="btn btn-danger"><i class="fas fa-power-off"></i> Reiniciar Sistema</button>
@@ -717,7 +717,7 @@ function getHistoryContent() {
         <div class="card">
             <div class="section-header">
                 <h2 class="section-title">Eventos</h2>
-                <div style="color:#94a3b8;font-size:0.875rem;" id="history-count">Mostrando <strong>${history.length}</strong> evento(s)</div>
+                <div style="color:var(--text-secondary);font-size:0.875rem;" id="history-count">Mostrando <strong>${history.length}</strong> evento(s)</div>
             </div>
             <div class="table-container">
                 <table>
@@ -730,17 +730,17 @@ function getHistoryContent() {
         <div class="card">
             <div class="section-header"><h2 class="section-title">Backup e Restauração</h2></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
-                <div style="background:rgba(30,41,59,0.5);padding:1.5rem;border-radius:var(--border-radius);">
+                <div style="background:var(--bg-surface);padding:1.5rem;border-radius:var(--border-radius);">
                     <h3 style="margin-bottom:0.75rem;">Criar Backup</h3>
-                    <div style="color:#94a3b8;font-size:0.875rem;margin-bottom:1.25rem;">
+                    <div style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1.25rem;">
                         Salva todos os dados do sistema: dispositivos, alertas, regras e configurações.
-                        ${backups.length ? `<div style="margin-top:0.5rem;color:#64748b;">Último backup: ${backups[0].date} (${backups[0].size})</div>` : ''}
+                        ${backups.length ? `<div style="margin-top:0.5rem;color:var(--text-muted);">Último backup: ${backups[0].date} (${backups[0].size})</div>` : ''}
                     </div>
                     <button class="btn btn-primary" id="create-backup-btn"><i class="fas fa-database"></i> Criar Backup Agora</button>
                 </div>
-                <div style="background:rgba(30,41,59,0.5);padding:1.5rem;border-radius:var(--border-radius);">
+                <div style="background:var(--bg-surface);padding:1.5rem;border-radius:var(--border-radius);">
                     <h3 style="margin-bottom:0.75rem;">Restaurar Backup</h3>
-                    <div style="color:#94a3b8;font-size:0.875rem;margin-bottom:1rem;">Selecione um ponto de restauração:</div>
+                    <div style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1rem;">Selecione um ponto de restauração:</div>
                     <select class="form-control" id="backup-select" style="margin-bottom:1rem;">
                         ${renderBackupOptions(backups)}
                     </select>
@@ -751,14 +751,14 @@ function getHistoryContent() {
             </div>
             ${backups.length ? `
             <div style="margin-top:1.5rem;">
-                <h4 style="margin-bottom:1rem;color:#94a3b8;font-size:0.875rem;text-transform:uppercase;letter-spacing:0.05em;">Backups Disponíveis</h4>
+                <h4 style="margin-bottom:1rem;color:var(--text-secondary);font-size:0.875rem;text-transform:uppercase;letter-spacing:0.05em;">Backups Disponíveis</h4>
                 <div class="table-container">
                     <table>
                         <thead><tr><th>Arquivo</th><th>Data</th><th>Tamanho</th><th>Ações</th></tr></thead>
                         <tbody>
                             ${backups.map(b => `
                                 <tr>
-                                    <td><i class="fas fa-file-archive" style="color:#94a3b8;margin-right:0.5rem;"></i>${b.filename}</td>
+                                    <td><i class="fas fa-file-archive" style="color:var(--text-secondary);margin-right:0.5rem;"></i>${b.filename}</td>
                                     <td style="font-size:0.875rem;">${b.date}</td>
                                     <td style="font-size:0.875rem;">${b.size}</td>
                                     <td>
