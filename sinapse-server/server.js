@@ -23,7 +23,7 @@ const express      = require('express');
 const cors         = require('cors');
 const { getSnapshot, getHistory, getONUs, getGponPorts, getOLTsBandwidth,
         GPON_TOPOLOGY, GPON_PORTS, OLTS, OIDs,
-        getDevices, addDevice, updateDevice, removeDevice,
+        getDevices, addDevice, updateDevice, removeDevice, addOLT, addONU,
         getAlerts, resolveAlert, ignoreAlert, addAlert,
         getRules, addRule, updateRule, toggleRule, removeRule,
         getAppHistory, addHistory,
@@ -305,6 +305,16 @@ app.get('/api/devices',       (_,res)   => send(res, { data: getDevices() }));
 app.post('/api/devices',      (req,res) => { if(!req.body.name||!req.body.ip) return res.status(400).json({ok:false,error:'name e ip obrigatórios'}); send(res,{data:addDevice(req.body)}); });
 app.put('/api/devices/:id',   (req,res) => { const u=updateDevice(parseInt(req.params.id),req.body); if(!u) return res.status(404).json({ok:false,error:'Não encontrado'}); send(res,{data:u}); });
 app.delete('/api/devices/:id',(req,res) => { removeDevice(parseInt(req.params.id)); send(res,{message:'Removido'}); });
+
+// ── Adicionar OLT/ONU ao monitoramento ───────────────────────────────────────
+app.post('/api/olts', (req, res) => {
+    if (!req.body.ip) return res.status(400).json({ ok: false, error: 'ip obrigatório' });
+    send(res, { data: addOLT(req.body) });
+});
+app.post('/api/onus', (req, res) => {
+    if (!req.body.gponPort) return res.status(400).json({ ok: false, error: 'gponPort obrigatório' });
+    send(res, { data: addONU(req.body) });
+});
 
 // ── Alertas CRUD ──────────────────────────────────────────────────────────────
 app.get('/api/alerts/all',    (_,res)   => send(res, { data: getAlerts() }));

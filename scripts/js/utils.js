@@ -124,17 +124,24 @@ function escHtml(str) {
 
 // ===== AÇÕES — DISPOSITIVOS =====
 
+function _findDevice(id) {
+    return (typeof _mgmtDevices !== 'undefined' && _mgmtDevices.length
+        ? _mgmtDevices
+        : DeviceStorage.getAll()
+    ).find(d => d.id === id);
+}
+
 function editDevice(id) {
-    const device = DeviceStorage.getAll().find(d => d.id === id);
+    const device = _findDevice(id);
     if (!device) return;
     openModal(`Editar — ${device.name}`, `
         <div class="form-group">
             <label class="form-label">Nome</label>
-            <input type="text" class="form-control" id="edit-name" value="${device.name}">
+            <input type="text" class="form-control" id="edit-name" value="${escHtml(device.name)}">
         </div>
         <div class="form-group">
             <label class="form-label">IP</label>
-            <input type="text" class="form-control" id="edit-ip" value="${device.ip}">
+            <input type="text" class="form-control" id="edit-ip" value="${escHtml(device.ip || '')}">
         </div>
         <div class="form-group">
             <label class="form-label">Status</label>
@@ -144,29 +151,47 @@ function editDevice(id) {
             </select>
         </div>
     `, 'Salvar', () => {
-        DeviceStorage.update(id, {
+        const fields = {
             name:   document.getElementById('edit-name').value.trim(),
             ip:     document.getElementById('edit-ip').value.trim(),
             status: document.getElementById('edit-status').value,
-        });
+        };
+        API.updateDevice(id, fields);
         showToast('Dispositivo atualizado!', 'success');
         closeModal();
-        if (AppState.currentPage === 'devices') navigateTo('devices');
+        setTimeout(() => { if (typeof _loadMgmtDevices === 'function') _loadMgmtDevices(); }, 300);
     });
 }
 
 function viewDeviceMetrics(id) {
-    const d = DeviceStorage.getAll().find(x => x.id === id);
+    const d = _findDevice(id);
     if (!d) return;
-    const rows = d.cpu !== undefined
-        ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-            ${[['CPU', d.cpu + '%'], ['Memória', d.memory + '%'], ['Temperatura', (d.temperature || '-') + '°C']].map(([k, v]) => `
+    let rows;
+    if (d.type === 'OLT') {
+        rows = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            ${[['CPU', (d.cpu ?? '--') + '%'], ['Memória', (d.memory ?? '--') + '%'], ['Temperatura', (d.temperature ?? '--') + '°C'], ['ONUs Ativas', `${d.onus_active ?? '--'}/${d.onus_total ?? '--'}`]].map(([k, v]) => `
                 <div style="background:var(--bg-base);padding:1rem;border-radius:8px;">
                     <div style="color:var(--text-secondary);font-size:0.8rem;">${k}</div>
-                    <div style="font-size:1.5rem;font-weight:700;">${v}</div>
+                    <div style="font-size:1.4rem;font-weight:700;">${v}</div>
                 </div>`).join('')}
-           </div>`
-        : `<p style="color:var(--text-secondary);">Métricas detalhadas não disponíveis para este tipo.</p>`;
+           </div>`;
+    } else if (d.type === 'ONU') {
+        const rxColor = (d.rxPower ?? 0) < -27 ? 'var(--danger-color)' : (d.rxPower ?? 0) < -24 ? 'var(--warning-color)' : 'var(--success-color)';
+        rows = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            ${[['RxPower', { val: (d.rxPower ?? '--') + ' dBm', color: rxColor }],
+               ['TxPower', { val: (d.txPower ?? '--') + ' dBm', color: '' }],
+               ['Latência', { val: (d.latency ?? '--') + ' ms', color: '' }],
+               ['Distância', { val: d.distance ?? '--', color: '' }],
+               ['Porta GPON', { val: d.gponPort ?? '--', color: '' }],
+               ['Uptime', { val: d.uptime ?? '--', color: '' }]].map(([k, o]) => `
+                <div style="background:var(--bg-base);padding:1rem;border-radius:8px;">
+                    <div style="color:var(--text-secondary);font-size:0.8rem;">${k}</div>
+                    <div style="font-size:1.1rem;font-weight:700;${o.color ? 'color:' + o.color + ';' : ''}">${o.val}</div>
+                </div>`).join('')}
+           </div>`;
+    } else {
+        rows = `<p style="color:var(--text-secondary);">Métricas detalhadas não disponíveis para este tipo.</p>`;
+    }
     openModal(`Métricas — ${d.name}`, rows, 'Fechar', closeModal);
 }
 
@@ -178,25 +203,25 @@ function testDevice(id) {
     setTimeout(() => {
         btn.innerHTML = original;
         btn.disabled  = false;
-        const d = DeviceStorage.getAll().find(x => x.id === id);
+        const d = _findDevice(id);
         showToast(`Ping para ${d?.ip || 'dispositivo'}: OK — ${Math.floor(Math.random() * 20) + 5}ms`, 'success');
     }, 1500);
 }
 
 function removeDevice(id) {
-    const d = DeviceStorage.getAll().find(x => x.id === id);
+    const d = _findDevice(id);
     if (!d) return;
     openModal('Confirmar Remoção', `
         <div style="text-align:center;padding:1rem;">
             <i class="fas fa-trash" style="font-size:2.5rem;color:var(--danger-color);margin-bottom:1rem;display:block;"></i>
-            <p>Tem certeza que deseja remover <strong>${d.name}</strong>?</p>
+            <p>Tem certeza que deseja remover <strong>${escHtml(d.name)}</strong>?</p>
             <p style="color:var(--text-secondary);font-size:0.875rem;margin-top:0.5rem;">Esta ação não pode ser desfeita.</p>
         </div>
     `, 'Remover', () => {
-        DeviceStorage.remove(id);
+        API.deleteDevice(id);
         showToast(`"${d.name}" removido.`, 'warning');
         closeModal();
-        if (AppState.currentPage === 'devices') navigateTo('devices');
+        setTimeout(() => { if (typeof _loadMgmtDevices === 'function') _loadMgmtDevices(); }, 300);
     });
 }
 
