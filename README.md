@@ -123,18 +123,36 @@ O tooltip do gráfico de banda exibe a taxa em Mbps, o percentual de uso da capa
 
 ### Dispositivos
 
-Gerenciamento de equipamentos de rede.
+Gerenciamento de dispositivos sincronizado com o monitoramento em tempo real.
 
-**Tabela de ONUs**
-- Lista todas as ONUs de todas as portas GPON com: Apto/Cliente/Modelo, IP/Serial, Porta, Status (online/offline + indicador de sinal degradado), RxPower, TxPower, Latência, Distância, Uptime.
-- Polling de 5s mantém a tabela sempre atualizada.
-- Badges `Online` / `Offline` com contagem atualizada em tempo real.
+**Tabela de Dispositivos Monitorados**
+- Carregada diretamente da API (`GET /api/devices`) — exibe todas as **OLTs e ONUs** efetivamente monitoradas pelo sistema (3 OLTs + 18 ONUs na topologia padrão).
+- Polling de 5s mantém status e métricas atualizados automaticamente.
+- Colunas por tipo de dispositivo:
 
-**Tabela de Dispositivos (CRUD)**
-- Filtros em tempo real por nome/IP/tipo (campo de texto), tipo (OLT, Router, Switch, Rádio) e status (Online/Offline).
-- Ações por linha: Editar, Ver Métricas, Testar Conexão, Remover.
-- Botão "Novo Dispositivo" abre modal com campos: Nome, IP, Tipo, Comunidade SNMP.
-- Botão "Resetar dados" restaura o dataset padrão.
+| Coluna | OLT | ONU |
+|--------|-----|-----|
+| Nome / Cliente | Nome da OLT | Nome da ONU + nome do cliente |
+| IP / Porta GPON | IP de gerência + Fabricante / Localização | IP + porta GPON (ex: `0/1/0`) + serial |
+| Tipo | Badge OLT | Badge ONU |
+| Status | Online / Offline | Online / Offline |
+| Métricas | CPU% e ONUs ativas/total | RxPower em dBm (colorido por limiar) e latência |
+
+- Filtros em tempo real por nome/IP/cliente (texto livre), tipo (OLT, ONU, Router, Switch, Rádio) e status.
+
+**Botão "Novo Dispositivo" — formulário dinâmico por tipo**
+
+O modal adapta seus campos conforme o tipo selecionado:
+
+| Tipo | Campos | Ação no backend |
+|------|--------|-----------------|
+| **OLT** | Nome/ID, IP\*, Fabricante, Modelo, Localização (POP), Capacidade (Mbps) | Cria OLT em `OLTS[]`, porta GPON inicial e rastreamento de banda — aparece automaticamente no gráfico do Dashboard |
+| **ONU** | Porta GPON\* (dropdown com contagem de ONUs), Apto/Unidade\*, IP, Cliente, Serial, Modelo, Distância (km) | Insere no `onuState` da porta selecionada e inicia monitoramento em tempo real (RxPower, latência, degradação) |
+| **Router / Switch / Rádio** | Nome\*, IP\*, Comunidade SNMP | Adiciona ao `DeviceStorage` genérico |
+
+\* campo obrigatório
+
+O seletor de Porta GPON (tipo ONU) é carregado dinamicamente da API com a contagem atual de ONUs por porta.
 
 **Descoberta Automática**
 - Campo de faixa de IP (CIDR), seletor de protocolo (Ping / SNMP v2c / Ping+SNMP) e botão "Escanear Rede".
@@ -251,8 +269,10 @@ Log de eventos e gerenciamento de backups.
 - **Cadastro de Clientes** (`CLIENT_PROFILES` em `mock-engine.js`) — 8 clientes (ONUs da OLT-01) com CPF/CNPJ, endereço completo, coordenadas GPS, telefone, e-mail, plano contratado e nível de criticidade (comum / prioritário / crítico)
 - REST API completa com CRUD para dispositivos, alertas, regras, histórico, backups e configurações
   - `GET /api/olts` — lista todas as OLTs do provedor (id, modelo, IP, capacidade, localização)
-  - `GET /api/olts/bandwidth` — consumo de banda por OLT (IN/OUT Mbps, % de carga, capacidade); retorna array dinâmico — basta adicionar uma OLT em `OLTS` para aparecer no gráfico
+  - `POST /api/olts` — adiciona nova OLT ao monitoramento; cria porta GPON inicial e rastreamento de banda automaticamente
+  - `GET /api/olts/bandwidth` — consumo de banda por OLT (IN/OUT Mbps, % de carga, capacidade); retorna array dinâmico
   - `GET /api/gpon/ports` — todas as portas GPON de todas as OLTs com estatísticas de ONUs
+  - `POST /api/onus` — adiciona nova ONU a uma porta GPON; inicializa `onuState` e inicia monitoramento em tempo real
   - `GET /api/clients` / `GET /api/clients/:id` — cadastro de clientes
 
 ---
@@ -267,7 +287,7 @@ Log de eventos e gerenciamento de backups.
 
 - As ONUs da **OLT-01** têm cadastro completo de cliente (drawer lateral com CPF/CNPJ, endereço, plano, criticidade).
 - As ONUs da **OLT-02** e **OLT-03** são monitoradas nas tabelas e no seletor de porta, mas sem cadastro de cliente associado.
-- Para adicionar uma nova OLT ao sistema, basta incluir uma entrada no array `OLTS` em `mock-engine.js` — o gráfico de consumo de banda a exibirá automaticamente.
+- Novas OLTs e ONUs podem ser adicionadas em tempo de execução via `POST /api/olts` e `POST /api/onus` (botão "Novo Dispositivo" na página Dispositivos) — o gráfico de banda e o seletor de portas se atualizam automaticamente.
 
 ---
 

@@ -104,10 +104,46 @@ npm run dev
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
-| GET | `/api/devices` | Listar todos os dispositivos |
-| POST | `/api/devices` | Adicionar dispositivo (requer `name`, `ip`) |
+| GET | `/api/devices` | Listar todos os dispositivos (OLTs + ONUs monitoradas) |
+| POST | `/api/devices` | Adicionar dispositivo genérico (requer `name`, `ip`) |
 | PUT | `/api/devices/:id` | Atualizar dispositivo |
 | DELETE | `/api/devices/:id` | Remover dispositivo |
+
+### Adicionar OLT/ONU ao Monitoramento
+
+| Método | Endpoint | Campos | Descrição |
+|--------|----------|--------|-----------|
+| POST | `/api/olts` | `ip`\* `name` `vendor` `model` `location` `capacity` | Adiciona nova OLT; cria porta GPON inicial e slot de banda automaticamente |
+| POST | `/api/onus` | `gponPort`\* `apt`\* `ip` `client` `serial` `model` `distance` | Adiciona nova ONU à porta GPON especificada e inicia simulação em tempo real |
+
+\* campo obrigatório
+
+**Exemplo — adicionar OLT:**
+```json
+POST /api/olts
+{
+  "ip": "10.0.4.10",
+  "name": "OLT-04",
+  "vendor": "Datacom",
+  "model": "DmOS-OLT-1",
+  "location": "POP Bairro Leste",
+  "capacity": 2500
+}
+```
+
+**Exemplo — adicionar ONU:**
+```json
+POST /api/onus
+{
+  "gponPort": "0/1/0",
+  "apt": "Apto 401",
+  "ip": "10.0.1.120",
+  "client": "Maria Souza",
+  "serial": "HW-ONU-000019",
+  "model": "HG8245Q2",
+  "distance": "0.6"
+}
+```
 
 ---
 
