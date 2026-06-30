@@ -49,6 +49,15 @@ const AlertStorage = {
     KEY: 'alerts',
     getAll() { return Storage.get(this.KEY, []); },
 
+    async sync() {
+        const serverAlerts = await API.getAllAlerts();
+        if (serverAlerts && Array.isArray(serverAlerts)) {
+            Storage.set(this.KEY, serverAlerts);
+            return serverAlerts;
+        }
+        return this.getAll();
+    },
+
     async resolve(id) {
         await API.resolveAlert(id);                                  // PUT /api/alerts/:id/resolve
         Storage.set(this.KEY, this.getAll().map(a =>
