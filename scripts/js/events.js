@@ -126,6 +126,13 @@ function initCommonEvents() {
 function initDashboardEvents() {
     // Latência GPON inicializada antes do polling para garantir estado vazio
     initLatencyGPONChartEmpty();
+
+    // Carga inicial de alertas no card "Alertas Ativos"
+    (async () => {
+        await AlertStorage.sync();
+        _refreshAlertViews();
+    })();
+
     // Gráfico de consumo de banda por OLT — carregado de forma assíncrona
     (async () => {
         try {
@@ -612,6 +619,12 @@ function openAddDeviceModal() {
 
 // ===== ALERTAS =====
 function initAlertsEvents() {
+    // Sincronizar alertas do servidor e atualizar tabela
+    (async () => {
+        await AlertStorage.sync();
+        _refreshAlertViews();
+    })();
+
     // Carregar seção de Traps
     (async () => {
         const [traps, statsRes] = await Promise.all([API.getTraps(), API.getTrapStats()]);
