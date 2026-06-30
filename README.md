@@ -14,7 +14,7 @@ O sistema é composto por **6 páginas funcionais**:
 
 - **Dashboard** — KPIs por porta GPON, gráficos ao vivo (consumo de banda por OLT e latência GPON) e resumo de SNMP Traps
 - **Dispositivos** — Tabela de ONUs em tempo real + CRUD completo de dispositivos com filtros e descoberta automática de rede
-- **Alertas** — Gerenciamento de alertas por severidade, SNMP Traps com reconhecimento e regras de notificação configuráveis (Email, Telegram, SMS)
+- **Alertas** — Parâmetros de monitoramento configuráveis pelo operador (limiares, duração, ação), SNMP Traps com reconhecimento e tabela de alertas gerados automaticamente
 - **Análise** — Predição de falhas com modelos de IA (Isolation Forest, Regressão Linear, LSTM) e agendamento de manutenções
 - **Configurações** — Parâmetros de rede, monitoramento, notificações e informações do nó
 - **Histórico** — Auditoria de eventos com filtros, exportação (CSV/JSON/PDF) e sistema de backup/restauração
@@ -82,7 +82,7 @@ Visão geral do estado da rede em tempo real.
 O tooltip do gráfico de banda exibe a taxa em Mbps, o percentual de uso da capacidade e o modelo da OLT. OLTs com capacidades diferentes (ex.: 2,5 Gbps vs 10 Gbps) são refletidas automaticamente nos percentuais e no eixo Y.
 
 **Alertas Ativos**
-- Lista os alertas não resolvidos do `AlertStorage` com badge de contagem crítica.
+- Lista os alertas não resolvidos gerados pelo monitoramento (parâmetros configurados ou anomalias da API). Exibe "Nenhum alerta ativo" enquanto não há alertas. Badge com contagem de críticos atualizado em tempo real.
 
 **Dispositivos Monitorados**
 - Cards com métricas ao vivo atualizados a cada 5s em sincronia com as KPIs.
@@ -163,26 +163,59 @@ O seletor de Porta GPON (tipo ONU) é carregado dinamicamente da API com a conta
 
 ### Alertas
 
-Gerenciamento de alertas e regras de notificação.
+Monitoramento configurável pelo operador, SNMP Traps e gestão de alertas gerados.
 
 **Barra de filtros**
 - Botões: Todos / Críticos / Avisos / Info / Resolvidos — cada um exibe badge com contagem.
 - Campo de busca filtra por título, descrição ou dispositivo em tempo real.
 
 **Tabela de Alertas**
+- Exibe apenas alertas gerados pelo sistema (parâmetros de monitoramento ou anomalias da API). Sem dados fictícios de amostra.
 - Colunas: Severidade, Descrição, Dispositivo, Início, Resolvido em, Ações.
 - Ações por linha: Resolver (marca como resolvido), Ignorar, Detalhes.
-- Botão "Resetar dados" restaura o dataset padrão.
+- Botão "Limpar" remove todos os alertas registrados.
 
 **SNMP Traps**
 - Seção injetada dinamicamente com tabela de traps recebidos.
 - Filtros por severidade e por tipo de trap.
 - Ação de acknowledge individual ou em massa.
 
-**Regras de Alerta (CRUD)**
-- Tabela com: Nome, Condição, Ação, Status (Ativa/Inativa), Ações.
-- Botão "Nova Regra" abre modal com campos: Nome, Condição, Ação (Email / Telegram / SMS etc.), Severidade.
-- Ações por linha: Editar (modal de edição), Ativar/Desativar (toggle), Remover (confirmação).
+**Parâmetros de Monitoramento (CRUD)**
+
+O operador define os limites que disparam alertas automaticamente a cada ciclo de polling (5s). Os tipos de parâmetros espelham os SNMP Traps suportados pelo `trap-engine.js`.
+
+| Tipo | Descrição | Limiar |
+|------|-----------|--------|
+| Sinal Óptico (RxPower) | Dispara quando RxPower cai abaixo do limiar | `< X dBm` |
+| Temperatura Alta | Dispara quando temperatura interna ultrapassa o limiar | `> X °C` |
+| CPU Alta | Dispara quando utilização de CPU ultrapassa o limiar | `> X %` |
+| Latência Alta | Dispara quando latência média das ONUs supera o limiar | `> X ms` |
+| ONU Offline | Dispara quando uma ou mais ONUs ficam offline | evento |
+| Link Down | Dispara quando interface de rede fica inativa (via Trap) | evento |
+| Saturação de Banda | Dispara quando utilização de banda supera o limiar | `> X %` |
+| Falha de Autenticação SNMP | Dispara em falha de autenticação SNMP (via Trap) | evento |
+
+Cada parâmetro possui:
+- **Nome personalizado** — definido pelo operador
+- **Dispositivo Alvo** — todos os dispositivos ou um dispositivo específico
+- **Limiar** — valor numérico com unidade (dBm / °C / % / ms), para tipos threshold-based
+- **Duração mínima** — a condição deve persistir N minutos antes de disparar (0 = imediato)
+- **Severidade** — Crítico / Aviso / Info (padrão pré-preenchido por tipo)
+- **Ação** — Email / Telegram / SMS / Dashboard ou combinações
+- **Status** — Ativo/Inativo com contador de disparos
+
+O modal de criação/edição preenche automaticamente nome, operador (`<` / `>`), unidade e severidade padrão ao selecionar o tipo. Alertas gerados atualizam em tempo real a tabela de alertas e o card "Alertas Ativos" do Dashboard.
+
+**Parâmetros padrão pré-configurados**
+
+| Parâmetro | Condição | Severidade |
+|-----------|----------|------------|
+| Degradação Óptica Crítica | RxPower < -27 dBm | Crítico |
+| Sinal Óptico Baixo | RxPower < -24 dBm | Aviso |
+| CPU Alta | CPU > 80% por 5 min | Aviso |
+| Temperatura Alta | Temperatura > 65 °C | Aviso |
+| Latência Alta | Latência > 50 ms por 5 min | Aviso |
+| ONU Offline | Status offline detectado | Crítico |
 
 ---
 
@@ -259,6 +292,7 @@ Log de eventos e gerenciamento de backups.
 - Chart.js 4.4.1 — gráficos em tempo real com janela deslizante de 30 pontos
 - SPA com roteamento client-side (`router.js`)
 - Polling de 5 segundos via `api.js` (métricas e traps independentes)
+- Motor de avaliação de parâmetros de monitoramento (`evaluateMonitoringParams`) executado a cada tick de polling — avalia limiares, suporta duração mínima e throttle de 5 min entre disparos
 - LocalStorage como camada de persistência client-side (`storage.js`)
 
 **Backend**

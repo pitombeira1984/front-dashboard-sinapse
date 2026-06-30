@@ -270,6 +270,9 @@ function applyLiveData(data) {
         setAvail.textContent = `${data.availability}%`;
     }
 
+    // Avaliar parâmetros de monitoramento configurados pelo operador
+    if (typeof evaluateMonitoringParams === 'function') evaluateMonitoringParams(data);
+
     // Alerta de anomalia automático
     if (data.anomaly) {
         const alertsList = document.getElementById('alerts-list');
