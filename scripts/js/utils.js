@@ -273,9 +273,9 @@ function viewAlertDetails(id) {
 }
 
 function resetAlerts() {
-    openModal('Resetar Alertas', `<p>Restaurará os alertas para os dados originais.</p>`, 'Resetar', () => {
+    openModal('Limpar Alertas', `<p>Remove todos os alertas registrados. Novos alertas serão gerados automaticamente pelo monitoramento.</p>`, 'Limpar', () => {
         AlertStorage.reset();
-        showToast('Alertas restaurados.', 'info');
+        showToast('Alertas limpos.', 'info');
         closeModal();
         navigateTo('alerts');
     });

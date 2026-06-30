@@ -1,3 +1,90 @@
+// ===== CATÁLOGO DE TIPOS DE PARÂMETRO DE MONITORAMENTO =====
+// Espelha os TRAP_TYPES do trap-engine.js — mesmos parâmetros, configuráveis pelo operador.
+const MONITORING_PARAM_TYPES = {
+    opticalDegradation: {
+        label:            'Sinal Óptico (RxPower)',
+        icon:             'fa-satellite-dish',
+        hasThreshold:     true,
+        operator:         '<',
+        unit:             'dBm',
+        defaultThreshold: -24,
+        defaultSeverity:  'critical',
+        description:      'Dispara quando RxPower cai abaixo do limiar. Valor típico de operação: acima de -22 dBm.',
+        dataKey:          'avgRxPower',
+    },
+    highTemperature: {
+        label:            'Temperatura Alta',
+        icon:             'fa-thermometer-full',
+        hasThreshold:     true,
+        operator:         '>',
+        unit:             '°C',
+        defaultThreshold: 65,
+        defaultSeverity:  'warning',
+        description:      'Dispara quando a temperatura interna ultrapassa o limiar operacional.',
+        dataKey:          'temperature',
+    },
+    highCPU: {
+        label:            'CPU Alta',
+        icon:             'fa-microchip',
+        hasThreshold:     true,
+        operator:         '>',
+        unit:             '%',
+        defaultThreshold: 80,
+        defaultSeverity:  'warning',
+        description:      'Dispara quando a utilização de CPU ultrapassa o limiar por tempo configurado.',
+        dataKey:          'cpu',
+    },
+    latencyHigh: {
+        label:            'Latência Alta',
+        icon:             'fa-clock',
+        hasThreshold:     true,
+        operator:         '>',
+        unit:             'ms',
+        defaultThreshold: 50,
+        defaultSeverity:  'warning',
+        description:      'Dispara quando a latência média das ONUs supera o limiar configurado.',
+        dataKey:          'avgLatency',
+    },
+    onuOffline: {
+        label:            'ONU Offline',
+        icon:             'fa-network-wired',
+        hasThreshold:     false,
+        defaultSeverity:  'critical',
+        description:      'Dispara quando uma ou mais ONUs passam para o estado offline.',
+        dataKey:          'onusOnline',
+    },
+    linkDown: {
+        label:            'Link Down',
+        icon:             'fa-unlink',
+        hasThreshold:     false,
+        defaultSeverity:  'critical',
+        description:      'Dispara quando uma interface de rede fica inativa (via SNMP Trap).',
+        dataKey:          null,
+    },
+    highBandwidth: {
+        label:            'Saturação de Banda',
+        icon:             'fa-tachometer-alt',
+        hasThreshold:     true,
+        operator:         '>',
+        unit:             '%',
+        defaultThreshold: 85,
+        defaultSeverity:  'warning',
+        description:      'Dispara quando a utilização de banda supera o limiar configurado.',
+        dataKey:          'bandwidthPercent',
+    },
+    authenticationFailure: {
+        label:            'Falha de Autenticação SNMP',
+        icon:             'fa-shield-alt',
+        hasThreshold:     false,
+        defaultSeverity:  'critical',
+        description:      'Dispara quando ocorre falha de autenticação SNMP (via Trap).',
+        dataKey:          null,
+    },
+};
+
+// Rastreia quando cada condição foi detectada pela primeira vez (para duração mínima)
+const _conditionStartMap = {};
+
 // ===== INICIALIZAÇÃO DE EVENTOS POR PÁGINA =====
 let _timeInterval = null;
 
@@ -525,14 +612,13 @@ function openAddDeviceModal() {
 
 // ===== ALERTAS =====
 function initAlertsEvents() {
-    // Carregar seção de Traps na página de Alertas
+    // Carregar seção de Traps
     (async () => {
         const [traps, statsRes] = await Promise.all([API.getTraps(), API.getTrapStats()]);
         const stats = statsRes?.data ?? statsRes;
         const placeholder = document.getElementById('traps-section-placeholder');
         if (placeholder) {
             placeholder.outerHTML = renderTrapsSection(traps, stats);
-            // Vincular eventos dos filtros de trap
             document.getElementById('trap-filter-severity')?.addEventListener('change', filterTraps);
             document.getElementById('trap-filter-type')?.addEventListener('change', filterTraps);
         }
@@ -549,14 +635,10 @@ function initAlertsEvents() {
         });
     });
 
-    // Busca
     document.getElementById('alert-search')?.addEventListener('input', applyAlertFilters);
 
-    // ② NOVA REGRA
-    const newRuleBtn = document.getElementById('new-alert-rule-btn');
-    if (newRuleBtn) {
-        newRuleBtn.addEventListener('click', () => openAlertRuleModal());
-    }
+    document.getElementById('new-monitoring-param-btn')
+        ?.addEventListener('click', () => openMonitoringParamModal());
 }
 
 function applyAlertFilters() {
@@ -577,69 +659,247 @@ function applyAlertFilters() {
     if (badge) badge.textContent = `${AlertStorage.getAll().filter(a => a.severity === 'critical').length} Críticos`;
 }
 
-function openAlertRuleModal(ruleId = null) {
-    const rule    = ruleId ? AlertRulesStorage.getAll().find(r => r.id === ruleId) : null;
-    const isEdit  = !!rule;
-    openModal(isEdit ? 'Editar Regra' : 'Nova Regra de Alerta', `
+// ── Parâmetros de Monitoramento ───────────────────────────────────────────────
+
+function openMonitoringParamModal(paramId = null) {
+    const param  = paramId ? MonitoringParamsStorage.getAll().find(p => p.id === paramId) : null;
+    const isEdit = !!param;
+
+    const typeOptions = Object.entries(MONITORING_PARAM_TYPES).map(([key, def]) =>
+        `<option value="${key}" ${param?.paramType === key ? 'selected' : ''}>${def.label}</option>`
+    ).join('');
+
+    const devices  = DeviceStorage.getAll();
+    const deviceOptions = ['all', ...devices.map(d => d.name)]
+        .map(t => `<option value="${t}" ${(param?.target || 'all') === t ? 'selected' : ''}>${t === 'all' ? 'Todos os dispositivos' : t}</option>`)
+        .join('');
+
+    const actionOptions = ['Email','Telegram','Email + Telegram','Dashboard','Alerta Dashboard + Telegram','SMS','Email + SMS + Telegram']
+        .map(a => `<option ${param?.action === a ? 'selected' : ''}>${a}</option>`).join('');
+
+    openModal(isEdit ? 'Editar Parâmetro de Monitoramento' : 'Novo Parâmetro de Monitoramento', `
         <div class="form-group">
-            <label class="form-label">Nome da Regra *</label>
-            <input type="text" class="form-control" id="rule-name" placeholder="Ex: Temperatura Alta" value="${rule?.name || ''}">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Condição *</label>
-            <input type="text" class="form-control" id="rule-condition" placeholder="Ex: Temperatura > 70°C por 5 min" value="${rule?.condition || ''}">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Ação</label>
-            <select class="form-control" id="rule-action">
-                ${['Email','Telegram','Email + Telegram','Dashboard','Alerta Dashboard + Telegram','SMS','Email + SMS + Telegram'].map(a =>
-                    `<option ${rule?.action === a ? 'selected' : ''}>${a}</option>`).join('')}
+            <label class="form-label">Tipo de Parâmetro *</label>
+            <select class="form-control" id="mp-type" onchange="onMonitoringParamTypeChange()">
+                ${typeOptions}
             </select>
         </div>
-        <div class="form-group">
-            <label class="form-label">Severidade do Alerta</label>
-            <select class="form-control" id="rule-severity">
-                <option value="critical" ${rule?.severity === 'critical' ? 'selected' : ''}>Crítico</option>
-                <option value="warning"  ${rule?.severity === 'warning'  ? 'selected' : ''}>Aviso</option>
-                <option value="info"     ${rule?.severity === 'info'     ? 'selected' : ''}>Info</option>
-            </select>
+        <div id="mp-type-desc" style="background:var(--bg-base);padding:0.65rem 0.85rem;border-radius:6px;margin-bottom:1rem;font-size:0.8rem;color:var(--text-secondary);border-left:3px solid var(--primary-color);">
+            <i class="fas fa-info-circle" style="margin-right:0.4rem;"></i><span id="mp-type-desc-text"></span>
         </div>
-    `, isEdit ? 'Salvar Alterações' : 'Criar Regra', () => {
-        const name      = document.getElementById('rule-name')?.value?.trim();
-        const condition = document.getElementById('rule-condition')?.value?.trim();
-        const action    = document.getElementById('rule-action')?.value;
-        const severity  = document.getElementById('rule-severity')?.value;
-        if (!name || !condition) { showToast('Preencha Nome e Condição.', 'warning'); return; }
-        if (isEdit) {
-            AlertRulesStorage.update(ruleId, { name, condition, action, severity });
-            showToast('Regra atualizada!', 'success');
-        } else {
-            AlertRulesStorage.add({ name, condition, action, severity });
-            showToast(`Regra "${name}" criada!`, 'success');
+        <div class="form-group">
+            <label class="form-label">Nome *</label>
+            <input type="text" class="form-control" id="mp-name" value="${param?.name || ''}" placeholder="Ex: Sinal Óptico Crítico">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Dispositivo Alvo</label>
+            <select class="form-control" id="mp-target">${deviceOptions}</select>
+        </div>
+        <div id="mp-threshold-group" class="form-group">
+            <label class="form-label">Limiar — <span id="mp-threshold-desc" style="color:var(--text-muted);font-weight:400;"></span></label>
+            <div style="display:flex;align-items:center;gap:0.6rem;">
+                <span id="mp-operator" style="font-family:monospace;font-size:1.25rem;font-weight:700;color:var(--text-secondary);min-width:18px;text-align:center;"></span>
+                <input type="number" class="form-control" id="mp-threshold" value="${param?.threshold ?? ''}" step="0.1" style="flex:1;max-width:140px;">
+                <span id="mp-unit" style="color:var(--text-secondary);white-space:nowrap;min-width:30px;font-weight:600;"></span>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Duração mínima</label>
+            <div style="display:flex;align-items:center;gap:0.6rem;">
+                <input type="number" class="form-control" id="mp-duration" value="${param?.duration ?? 0}" min="0" max="60" style="width:90px;">
+                <span style="color:var(--text-secondary);font-size:0.875rem;">minutos &nbsp;·&nbsp; 0 = disparo imediato</span>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <div class="form-group" style="margin:0;">
+                <label class="form-label">Severidade</label>
+                <select class="form-control" id="mp-severity">
+                    <option value="critical" ${param?.severity === 'critical' ? 'selected' : ''}>Crítico</option>
+                    <option value="warning"  ${param?.severity === 'warning'  ? 'selected' : ''}>Aviso</option>
+                    <option value="info"     ${param?.severity === 'info'     ? 'selected' : ''}>Info</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label class="form-label">Ação</label>
+                <select class="form-control" id="mp-action">${actionOptions}</select>
+            </div>
+        </div>
+    `, isEdit ? 'Salvar Alterações' : 'Criar Parâmetro', () => _saveMonitoringParam(paramId));
+
+    // Inicializa campos baseados no tipo selecionado
+    onMonitoringParamTypeChange(param);
+}
+
+function onMonitoringParamTypeChange(existingParam = null) {
+    const typeEl = document.getElementById('mp-type');
+    if (!typeEl) return;
+    const def  = MONITORING_PARAM_TYPES[typeEl.value];
+    if (!def) return;
+
+    const descText      = document.getElementById('mp-type-desc-text');
+    const threshGroup   = document.getElementById('mp-threshold-group');
+    const threshDesc    = document.getElementById('mp-threshold-desc');
+    const operatorEl    = document.getElementById('mp-operator');
+    const thresholdEl   = document.getElementById('mp-threshold');
+    const unitEl        = document.getElementById('mp-unit');
+    const nameEl        = document.getElementById('mp-name');
+    const severityEl    = document.getElementById('mp-severity');
+
+    if (descText) descText.textContent = def.description;
+    if (threshGroup) threshGroup.style.display = def.hasThreshold ? '' : 'none';
+
+    if (def.hasThreshold) {
+        if (operatorEl)  operatorEl.textContent  = def.operator;
+        if (unitEl)      unitEl.textContent       = def.unit;
+        if (threshDesc)  threshDesc.textContent   = `valor ${def.operator === '<' ? 'mínimo aceitável' : 'máximo aceitável'}`;
+        // Preencher limiar apenas se campo vazio ou mudando de tipo (não edição)
+        if (thresholdEl && !thresholdEl.value && !existingParam) {
+            thresholdEl.value = def.defaultThreshold;
         }
+    }
+
+    // Preencher nome automaticamente se estiver vazio
+    if (nameEl && !nameEl.value) nameEl.value = def.label;
+
+    // Preencher severidade padrão se não for edição
+    if (severityEl && !existingParam) severityEl.value = def.defaultSeverity;
+}
+
+function _saveMonitoringParam(paramId) {
+    const type     = document.getElementById('mp-type')?.value;
+    const name     = document.getElementById('mp-name')?.value?.trim();
+    const target   = document.getElementById('mp-target')?.value || 'all';
+    const duration = parseInt(document.getElementById('mp-duration')?.value || '0', 10);
+    const severity = document.getElementById('mp-severity')?.value;
+    const action   = document.getElementById('mp-action')?.value;
+
+    if (!type || !name) { showToast('Preencha o tipo e o nome do parâmetro.', 'warning'); return; }
+
+    const def = MONITORING_PARAM_TYPES[type];
+    let threshold = null, operator = null, unit = null;
+
+    if (def.hasThreshold) {
+        threshold = parseFloat(document.getElementById('mp-threshold')?.value);
+        if (isNaN(threshold)) { showToast('Informe um valor de limiar válido.', 'warning'); return; }
+        operator = def.operator;
+        unit     = def.unit;
+    }
+
+    const fields = { name, paramType: type, target, operator, threshold, unit, duration, severity, action };
+
+    if (paramId) {
+        MonitoringParamsStorage.update(paramId, fields);
+        showToast(`Parâmetro "${name}" atualizado.`, 'success');
+    } else {
+        MonitoringParamsStorage.add(fields);
+        showToast(`Parâmetro "${name}" criado.`, 'success');
+    }
+
+    closeModal();
+    const tbody = document.getElementById('monitoring-params-body');
+    if (tbody) tbody.innerHTML = renderMonitoringParamRows(MonitoringParamsStorage.getAll());
+}
+
+function editMonitoringParam(id)   { openMonitoringParamModal(id); }
+
+function toggleMonitoringParam(id) {
+    MonitoringParamsStorage.toggle(id);
+    const tbody = document.getElementById('monitoring-params-body');
+    if (tbody) tbody.innerHTML = renderMonitoringParamRows(MonitoringParamsStorage.getAll());
+    showToast('Status do parâmetro atualizado.', 'info');
+}
+
+function removeMonitoringParam(id) {
+    openModal('Remover Parâmetro', `<p>Tem certeza que deseja remover este parâmetro de monitoramento?</p>`, 'Remover', () => {
+        MonitoringParamsStorage.remove(id);
+        delete _conditionStartMap[id];
         closeModal();
-        // Atualizar tabela de regras inline
-        const tbody = document.getElementById('alert-rules-body');
-        if (tbody) tbody.innerHTML = renderAlertRuleRows(AlertRulesStorage.getAll());
+        const tbody = document.getElementById('monitoring-params-body');
+        if (tbody) tbody.innerHTML = renderMonitoringParamRows(MonitoringParamsStorage.getAll());
+        showToast('Parâmetro removido.', 'warning');
     });
 }
 
-function editAlertRule(id)   { openAlertRuleModal(id); }
+// ── Atualiza as views de alertas em qualquer página que esteja ativa ──────────
+function _refreshAlertViews() {
+    const alerts = AlertStorage.getAll();
 
-function toggleAlertRule(id) {
-    AlertRulesStorage.toggle(id);
-    const tbody = document.getElementById('alert-rules-body');
-    if (tbody) tbody.innerHTML = renderAlertRuleRows(AlertRulesStorage.getAll());
-    showToast('Status da regra atualizado.', 'info');
+    // Tabela na página Alertas
+    const tbody = document.getElementById('alerts-table-body');
+    if (tbody) {
+        tbody.innerHTML = renderAlertRows(alerts);
+        const count = document.getElementById('alerts-count');
+        const badge = document.getElementById('alerts-critical-count');
+        if (count) count.innerHTML = `Mostrando <strong>${alerts.length}</strong> alerta(s)`;
+        if (badge) badge.textContent = `${alerts.filter(a => a.severity === 'critical').length} Críticos`;
+    }
+
+    // Card "Alertas Ativos" no Dashboard
+    const alertsList = document.querySelector('.alerts-list');
+    if (alertsList && !alertsList.closest('#traps-section')) {
+        alertsList.innerHTML = renderAlertItems(alerts);
+        const critBadge = alertsList.closest('.card')?.querySelector('.badge-critical');
+        if (critBadge) critBadge.textContent = `${alerts.filter(a => a.severity === 'critical').length} Críticos`;
+    }
 }
 
-function removeAlertRule(id) {
-    openModal('Remover Regra', `<p>Tem certeza que deseja remover esta regra de alerta?</p>`, 'Remover', () => {
-        AlertRulesStorage.remove(id);
-        closeModal();
-        const tbody = document.getElementById('alert-rules-body');
-        if (tbody) tbody.innerHTML = renderAlertRuleRows(AlertRulesStorage.getAll());
-        showToast('Regra removida.', 'warning');
+// ── Motor de avaliação dos parâmetros (chamado a cada tick de polling) ─────────
+function evaluateMonitoringParams(data) {
+    if (!data) return;
+
+    const params = MonitoringParamsStorage.getAll().filter(p => p.active);
+    const now    = Date.now();
+
+    params.forEach(param => {
+        const def = MONITORING_PARAM_TYPES[param.paramType];
+        if (!def || !def.dataKey) return; // Tipos event-based (linkDown, authFailure) dependem de Trap
+
+        const value = data[def.dataKey];
+        if (value === undefined || value === null) return;
+
+        // Avaliar condição
+        let conditionMet = false;
+        if (def.hasThreshold) {
+            const threshold = parseFloat(param.threshold);
+            if (param.operator === '<') conditionMet = value < threshold;
+            else if (param.operator === '>') conditionMet = value > threshold;
+        } else if (param.paramType === 'onuOffline') {
+            const total = data.onusTotal || 0;
+            conditionMet = total > 0 && value < total;
+        }
+
+        if (conditionMet) {
+            // Registrar quando a condição começou (para suporte à duração mínima)
+            if (!_conditionStartMap[param.id]) _conditionStartMap[param.id] = now;
+
+            const elapsed    = now - _conditionStartMap[param.id];
+            const durationMs = (param.duration || 0) * 60 * 1000;
+            if (elapsed < durationMs) return; // Condição ainda não persistiu tempo suficiente
+
+            // Throttle: não re-disparar dentro de 5 minutos
+            if (param.lastTriggered && now - param.lastTriggered < 300000) return;
+
+            // Gerar alerta
+            const descricao = def.hasThreshold
+                ? `Valor atual: ${value}${param.unit} (limiar: ${param.operator} ${param.threshold}${param.unit})`
+                : `Condição detectada em: ${param.target === 'all' ? 'todos os dispositivos' : param.target}`;
+
+            AlertStorage.add({
+                title:       param.name,
+                description: descricao,
+                severity:    param.severity,
+                device:      param.target === 'all' ? 'Rede' : param.target,
+                time:        new Date().toLocaleString('pt-BR'),
+            });
+
+            MonitoringParamsStorage.recordTrigger(param.id);
+            _refreshAlertViews();
+            showToast(`[${param.severity === 'critical' ? 'CRÍTICO' : 'AVISO'}] ${param.name}`, param.severity === 'critical' ? 'error' : 'warning');
+
+        } else {
+            // Condição resolvida — resetar temporizador de duração
+            delete _conditionStartMap[param.id];
+        }
     });
 }
 

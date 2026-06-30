@@ -174,26 +174,49 @@ function renderAlertRows(alerts) {
         </tr>`).join('');
 }
 
-function renderAlertRuleRows(rules) {
-    if (!rules.length) return `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:2rem;">Nenhuma regra cadastrada.</td></tr>`;
-    return rules.map(r => `
-        <tr data-rule-id="${r.id}">
-            <td><div style="font-weight:600;">${r.name}</div></td>
-            <td style="font-size:0.875rem;color:var(--text-secondary);">${r.condition}</td>
-            <td style="font-size:0.875rem;">${r.action}</td>
-            <td><span class="badge ${r.active ? 'badge-success' : 'badge-critical'}">${r.active ? 'Ativa' : 'Inativa'}</span></td>
+function renderMonitoringParamRows(params) {
+    if (!params.length) return `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem;">Nenhum parâmetro configurado. Clique em <strong>Novo Parâmetro</strong> para começar.</td></tr>`;
+    return params.map(p => {
+        const def = (typeof MONITORING_PARAM_TYPES !== 'undefined' && MONITORING_PARAM_TYPES[p.paramType]) || {};
+        const sevColor = p.severity === 'critical' ? 'var(--danger-color)' : p.severity === 'warning' ? 'var(--warning-color)' : 'var(--secondary-color)';
+        const condLabel = def.hasThreshold
+            ? `<code style="background:var(--bg-base);padding:0.15rem 0.45rem;border-radius:4px;font-size:0.8rem;">${p.operator} ${p.threshold} ${p.unit}</code>`
+            : `<span style="font-size:0.8rem;color:var(--text-muted);">baseado em evento</span>`;
+        const durationLabel = p.duration > 0 ? `<div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.2rem;">por ${p.duration} min</div>` : '';
+        return `
+        <tr data-param-id="${p.id}">
+            <td>
+                <div style="display:flex;align-items:center;gap:0.6rem;">
+                    <i class="fas ${def.icon || 'fa-bell'}" style="color:${sevColor};font-size:0.95rem;flex-shrink:0;"></i>
+                    <div>
+                        <div style="font-weight:600;">${p.name}</div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);">${def.label || p.paramType}</div>
+                    </div>
+                </div>
+            </td>
+            <td style="font-size:0.875rem;">${p.target === 'all' ? 'Todos' : p.target}</td>
+            <td>${condLabel}${durationLabel}</td>
+            <td><span class="badge ${p.severity === 'critical' ? 'badge-critical' : p.severity === 'warning' ? 'badge-warning' : 'badge-success'}">${p.severity === 'critical' ? 'Crítico' : p.severity === 'warning' ? 'Aviso' : 'Info'}</span></td>
+            <td style="font-size:0.8rem;color:var(--text-secondary);">${p.action}</td>
+            <td>
+                <div style="display:flex;flex-direction:column;gap:0.2rem;">
+                    <span class="badge ${p.active ? 'badge-success' : ''}" style="${!p.active ? 'background:rgba(100,116,139,0.15);color:#64748b;border:1px solid rgba(100,116,139,0.3);' : ''}">${p.active ? 'Ativo' : 'Inativo'}</span>
+                    ${p.triggerCount > 0 ? `<span style="font-size:0.7rem;color:var(--text-muted);">${p.triggerCount}× disparado</span>` : ''}
+                </div>
+            </td>
             <td>
                 <div class="device-actions">
-                    <button class="action-btn" title="Editar"   onclick="editAlertRule(${r.id})"><i class="fas fa-edit"></i></button>
-                    <button class="action-btn" title="${r.active ? 'Desativar' : 'Ativar'}" onclick="toggleAlertRule(${r.id})">
-                        <i class="fas ${r.active ? 'fa-toggle-on' : 'fa-toggle-off'}"></i>
+                    <button class="action-btn" title="Editar" onclick="editMonitoringParam(${p.id})"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn" title="${p.active ? 'Desativar' : 'Ativar'}" onclick="toggleMonitoringParam(${p.id})">
+                        <i class="fas ${p.active ? 'fa-toggle-on' : 'fa-toggle-off'}"></i>
                     </button>
-                    <button class="action-btn" title="Remover" style="color:var(--danger-color);" onclick="removeAlertRule(${r.id})">
+                    <button class="action-btn" title="Remover" style="color:var(--danger-color);" onclick="removeMonitoringParam(${p.id})">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
             </td>
-        </tr>`).join('');
+        </tr>`;
+    }).join('');
 }
 
 function renderMaintenanceRows(items) {
@@ -418,16 +441,16 @@ function getDevicesContent() {
 
 // ALERTAS
 function getAlertsContent() {
-    const alerts = AlertStorage.getAll();
-    const rules  = AlertRulesStorage.getAll();
+    const alerts          = AlertStorage.getAll();
+    const monitoringParams = MonitoringParamsStorage.getAll();
     return `
         <header class="header">
             <div class="header-title">
                 <h1>Sistema de Alertas</h1>
-                <p>Configure e gerencie notificações e regras de alerta</p>
+                <p>Monitore a rede com parâmetros configuráveis e gerencie notificações</p>
             </div>
             <div class="header-actions">
-                <button class="btn btn-primary" id="new-alert-rule-btn"><i class="fas fa-plus"></i> Nova Regra</button>
+                <button class="btn btn-primary" id="new-monitoring-param-btn"><i class="fas fa-plus"></i> Novo Parâmetro</button>
             </div>
         </header>
 
@@ -467,12 +490,29 @@ function getAlertsContent() {
 
         <div class="card">
             <div class="section-header">
-                <h2 class="section-title">Regras de Alerta</h2>
+                <h2 class="section-title">
+                    <i class="fas fa-sliders-h" style="color:var(--primary-color);margin-right:0.5rem;"></i>
+                    Parâmetros de Monitoramento
+                </h2>
             </div>
+            <p style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1rem;">
+                Defina os limites e condições que disparam alertas automaticamente a cada ciclo de monitoramento (5s).
+                Os tipos de parâmetros são os mesmos utilizados pelos SNMP Traps.
+            </p>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>Nome da Regra</th><th>Condição</th><th>Ação</th><th>Status</th><th>Ações</th></tr></thead>
-                    <tbody id="alert-rules-body">${renderAlertRuleRows(rules)}</tbody>
+                    <thead>
+                        <tr>
+                            <th>Parâmetro</th>
+                            <th>Alvo</th>
+                            <th>Condição</th>
+                            <th>Severidade</th>
+                            <th>Ação</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monitoring-params-body">${renderMonitoringParamRows(monitoringParams)}</tbody>
                 </table>
             </div>
         </div>`;

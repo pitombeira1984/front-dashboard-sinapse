@@ -47,7 +47,7 @@ const DeviceStorage = {
 // ── Alertas ───────────────────────────────────────────────────────────────────
 const AlertStorage = {
     KEY: 'alerts',
-    getAll() { return Storage.get(this.KEY, sampleData.alerts); },
+    getAll() { return Storage.get(this.KEY, []); },
 
     async resolve(id) {
         await API.resolveAlert(id);                                  // PUT /api/alerts/:id/resolve
@@ -98,6 +98,42 @@ const AlertRulesStorage = {
         Storage.set(this.KEY, this.getAll().filter(r => r.id !== id));
     },
     reset() { Storage.remove(this.KEY); },
+};
+
+// ── Parâmetros de Monitoramento ───────────────────────────────────────────────
+const MonitoringParamsStorage = {
+    KEY: 'monitoring_params',
+    defaults: [
+        { id: 1, name: 'Degradação Óptica Crítica', paramType: 'opticalDegradation', target: 'all', operator: '<', threshold: -27, unit: 'dBm', duration: 0, severity: 'critical', action: 'Email + SMS + Telegram',      active: true, triggerCount: 0, lastTriggered: null },
+        { id: 2, name: 'Sinal Óptico Baixo',        paramType: 'opticalDegradation', target: 'all', operator: '<', threshold: -24, unit: 'dBm', duration: 0, severity: 'warning',  action: 'Alerta Dashboard + Telegram', active: true, triggerCount: 0, lastTriggered: null },
+        { id: 3, name: 'CPU Alta',                  paramType: 'highCPU',            target: 'all', operator: '>', threshold:  80, unit: '%',   duration: 5, severity: 'warning',  action: 'Email',                       active: true, triggerCount: 0, lastTriggered: null },
+        { id: 4, name: 'Temperatura Alta',          paramType: 'highTemperature',    target: 'all', operator: '>', threshold:  65, unit: '°C',  duration: 0, severity: 'warning',  action: 'Email + Telegram',            active: true, triggerCount: 0, lastTriggered: null },
+        { id: 5, name: 'Latência Alta',             paramType: 'latencyHigh',        target: 'all', operator: '>', threshold:  50, unit: 'ms',  duration: 5, severity: 'warning',  action: 'Email + Telegram',            active: true, triggerCount: 0, lastTriggered: null },
+        { id: 6, name: 'ONU Offline',               paramType: 'onuOffline',         target: 'all', operator: null, threshold: null, unit: null, duration: 0, severity: 'critical', action: 'Alerta Dashboard + Telegram', active: true, triggerCount: 0, lastTriggered: null },
+    ],
+    getAll()    { return Storage.get(this.KEY, this.defaults); },
+    add(param) {
+        const item = { ...param, id: Date.now(), triggerCount: 0, lastTriggered: null };
+        const list = this.getAll();
+        list.push(item);
+        Storage.set(this.KEY, list);
+        return item;
+    },
+    update(id, fields) {
+        const list = this.getAll().map(p => p.id === id ? { ...p, ...fields } : p);
+        Storage.set(this.KEY, list);
+        return list.find(p => p.id === id);
+    },
+    toggle(id) {
+        Storage.set(this.KEY, this.getAll().map(p => p.id === id ? { ...p, active: !p.active } : p));
+    },
+    remove(id)         { Storage.set(this.KEY, this.getAll().filter(p => p.id !== id)); },
+    recordTrigger(id)  {
+        Storage.set(this.KEY, this.getAll().map(p =>
+            p.id === id ? { ...p, triggerCount: (p.triggerCount || 0) + 1, lastTriggered: Date.now() } : p
+        ));
+    },
+    reset()            { Storage.remove(this.KEY); },
 };
 
 // ── Manutenções ───────────────────────────────────────────────────────────────
