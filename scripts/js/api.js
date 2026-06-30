@@ -114,6 +114,8 @@ const API = {
     async addDevice(d)           { const r = await this._fetchPost('/api/devices', d); return r?.data ?? null; },
     async updateDevice(id, f)    { const r = await this._fetchPut(`/api/devices/${id}`, f); return r?.data ?? null; },
     async deleteDevice(id)       { return this._fetchDelete(`/api/devices/${id}`); },
+    async addOLT(data)           { const r = await this._fetchPost('/api/olts', data); return r?.data ?? null; },
+    async addONU(data)           { const r = await this._fetchPost('/api/onus', data); return r?.data ?? null; },
 
     // ── CRUD Alertas ───────────────────────────────────────────────────────
     async getAllAlerts()          { return this._fetch('/api/alerts/all'); },

@@ -100,18 +100,45 @@ function renderDeviceCards(devices) {
 
 function renderDeviceRows(devices) {
     if (!devices.length) return `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">Nenhum dispositivo encontrado.</td></tr>`;
-    return devices.map(d => `
+    return devices.map(d => {
+        const typeBadge = d.type === 'OLT' ? 'badge-warning' : d.type === 'ONU' ? 'badge-success' : d.type === 'Router' ? 'badge-success' : 'badge-critical';
+
+        let ipInfo = `<div style="font-size:0.875rem;">${d.ip || '--'}</div>`;
+        if (d.type === 'ONU') {
+            ipInfo += `<div style="font-size:0.72rem;color:var(--text-muted);font-family:monospace;">Porta: ${d.gponPort || '--'}</div>`;
+            if (d.serial) ipInfo += `<div style="font-size:0.7rem;color:var(--text-muted);">${d.serial}</div>`;
+        } else if (d.type === 'OLT') {
+            if (d.vendor)   ipInfo += `<div style="font-size:0.75rem;color:var(--text-muted);">${d.vendor}${d.location ? ' • ' + d.location : ''}</div>`;
+        }
+
+        let metricsHtml = '<span style="color:var(--text-muted);">--</span>';
+        if (d.type === 'ONU' && d.status === 'online') {
+            const rxColor = (d.rxPower ?? 0) < -27 ? 'var(--danger-color)' : (d.rxPower ?? 0) < -24 ? 'var(--warning-color)' : 'var(--success-color)';
+            metricsHtml = `<div style="font-weight:600;color:${rxColor};">${d.rxPower != null ? d.rxPower + ' dBm' : '--'}</div>
+                           <div style="font-size:0.75rem;color:var(--text-muted);">${d.latency != null ? d.latency + ' ms' : ''}</div>`;
+        } else if (d.type === 'OLT') {
+            const cpuColor = (d.cpu ?? 0) > 80 ? 'var(--danger-color)' : (d.cpu ?? 0) > 60 ? 'var(--warning-color)' : 'var(--text-primary)';
+            metricsHtml = `<div style="color:${cpuColor};">CPU: ${d.cpu ?? '--'}%</div>
+                           <div style="font-size:0.75rem;color:var(--text-muted);">ONUs: ${d.onus_active ?? '--'}/${d.onus_total ?? '--'}</div>`;
+        } else if (d.status === 'online') {
+            metricsHtml = `<span style="font-size:0.8rem;color:var(--text-secondary);">Online</span>`;
+        }
+
+        return `
         <tr data-device-id="${d.id}">
-            <td><div style="font-weight:600;">${d.name}</div><div style="font-size:0.875rem;color:var(--text-secondary);">ID: ${d.id}</div></td>
-            <td>${d.ip}</td>
-            <td><span class="badge ${d.type === 'OLT' ? 'badge-warning' : d.type === 'Router' ? 'badge-success' : 'badge-critical'}" style="font-size:0.75rem;">${d.type}</span></td>
+            <td>
+                <div style="font-weight:600;">${d.name}</div>
+                ${d.client ? `<div style="font-size:0.8rem;color:var(--text-secondary);">${d.client}</div>` : `<div style="font-size:0.8rem;color:var(--text-muted);">ID: ${d.id}</div>`}
+            </td>
+            <td>${ipInfo}</td>
+            <td><span class="badge ${typeBadge}" style="font-size:0.75rem;">${d.type}</span></td>
             <td>
                 <div class="device-status status-${d.status}" style="justify-content:flex-start;">
                     <i class="fas fa-circle"></i>
                     <span>${d.status === 'online' ? 'Online' : 'Offline'}</span>
                 </div>
             </td>
-            <td>${d.status === 'online' ? 'Agora' : d.last_seen || 'há 15min'}</td>
+            <td>${metricsHtml}</td>
             <td>
                 <div class="device-actions">
                     <button class="action-btn" title="Editar"          onclick="editDevice(${d.id})"><i class="fas fa-edit"></i></button>
@@ -120,7 +147,8 @@ function renderDeviceRows(devices) {
                     <button class="action-btn" title="Remover" style="color:var(--danger-color);" onclick="removeDevice(${d.id})"><i class="fas fa-trash"></i></button>
                 </div>
             </td>
-        </tr>`).join('');
+        </tr>`;
+    }).join('');
 }
 
 function renderAlertRows(alerts) {
@@ -321,12 +349,11 @@ function getDashboardContent() {
 
 // DISPOSITIVOS
 function getDevicesContent() {
-    const devices = DeviceStorage.getAll();
     return `
         <header class="header">
             <div class="header-title">
                 <h1>Gerenciamento de Dispositivos</h1>
-                <p>Adicione, configure e monitore equipamentos de rede</p>
+                <p>OLTs e ONUs monitoradas em tempo real</p>
             </div>
             <div class="header-actions">
                 <button class="btn btn-primary" id="add-device-btn-page"><i class="fas fa-plus"></i> Novo Dispositivo</button>
@@ -335,12 +362,13 @@ function getDevicesContent() {
 
         <div class="card">
             <div class="section-header">
-                <h2 class="section-title">Todos os Dispositivos</h2>
+                <h2 class="section-title">Dispositivos Monitorados</h2>
                 <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-                    <input type="text" id="device-search" class="form-control" placeholder="Buscar por nome, IP ou tipo..." style="width:250px;">
+                    <input type="text" id="device-search" class="form-control" placeholder="Buscar por nome, IP ou cliente..." style="width:250px;">
                     <select id="device-filter-type" class="form-control" style="width:160px;">
                         <option value="">Todos os tipos</option>
                         <option value="OLT">OLT</option>
+                        <option value="ONU">ONU</option>
                         <option value="Router">Router</option>
                         <option value="Switch">Switch</option>
                         <option value="Radio">Rádio</option>
@@ -355,13 +383,17 @@ function getDevicesContent() {
             <div class="table-container">
                 <table>
                     <thead>
-                        <tr><th>Nome</th><th>IP</th><th>Tipo</th><th>Status</th><th>Última Verificação</th><th>Ações</th></tr>
+                        <tr><th>Nome / Cliente</th><th>IP / Porta GPON</th><th>Tipo</th><th>Status</th><th>Métricas</th><th>Ações</th></tr>
                     </thead>
-                    <tbody id="devices-table-body">${renderDeviceRows(devices)}</tbody>
+                    <tbody id="devices-table-body">
+                        <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">
+                            <i class="fas fa-spinner fa-spin" style="margin-right:0.5rem;"></i>Carregando dispositivos...
+                        </td></tr>
+                    </tbody>
                 </table>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;">
-                <div style="color:var(--text-secondary);font-size:0.875rem;" id="devices-count">Mostrando <strong>${devices.length}</strong> dispositivo(s)</div>
+                <div style="color:var(--text-secondary);font-size:0.875rem;" id="devices-count">Carregando...</div>
                 <button class="btn btn-secondary" onclick="resetDevices()"><i class="fas fa-undo"></i> Resetar dados</button>
             </div>
         </div>

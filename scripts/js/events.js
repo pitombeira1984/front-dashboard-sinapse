@@ -207,63 +207,49 @@ function initDashboardEvents() {
 }
 
 // ===== DISPOSITIVOS =====
+let _mgmtDevices = [];
+
+async function _loadMgmtDevices() {
+    const devices = await API.getDevices();
+    if (devices) {
+        _mgmtDevices = devices;
+        _applyMgmtFilters();
+    }
+}
+
+function _applyMgmtFilters() {
+    const query  = (document.getElementById('device-search')?.value  || '').toLowerCase().trim();
+    const type   = document.getElementById('device-filter-type')?.value  || '';
+    const status = document.getElementById('device-filter-status')?.value || '';
+    let list     = _mgmtDevices;
+    if (query)  list = list.filter(d =>
+        (d.name   || '').toLowerCase().includes(query) ||
+        (d.ip     || '').toLowerCase().includes(query) ||
+        (d.client || '').toLowerCase().includes(query) ||
+        (d.type   || '').toLowerCase().includes(query)
+    );
+    if (type)   list = list.filter(d => d.type   === type);
+    if (status) list = list.filter(d => d.status === status);
+    const tbody = document.getElementById('devices-table-body');
+    const count = document.getElementById('devices-count');
+    if (tbody) tbody.innerHTML = renderDeviceRows(list);
+    if (count) count.innerHTML = `Mostrando <strong>${list.length}</strong> de <strong>${_mgmtDevices.length}</strong> dispositivo(s)`;
+}
+
 function initDevicesEvents() {
     const addBtn = document.getElementById('add-device-btn-page');
     if (addBtn) addBtn.addEventListener('click', openAddDeviceModal);
 
-    // Carregar tabela de ONUs (todas as portas na página de dispositivos)
+    // Carregar dispositivos do monitoramento via API e iniciar polling
     (async () => {
-        const onus = await API.getONUs();
-        const tbody = document.getElementById('onus-table-body');
-        const onlineBadge  = document.getElementById('onus-online-badge');
-        const offlineBadge = document.getElementById('onus-offline-badge');
-        if (tbody && onus) {
-            tbody.innerHTML = renderONURows(onus);
-            const online  = onus.filter(o => o.status === 'online').length;
-            const offline = onus.length - online;
-            if (onlineBadge)  onlineBadge.textContent  = `${online} Online`;
-            if (offlineBadge) {
-                offlineBadge.textContent   = `${offline} Offline`;
-                offlineBadge.style.display = offline > 0 ? 'inline-flex' : 'none';
-            }
-        }
-
-        // Polling da tabela de ONUs (todas as portas)
-        API.startPolling(async () => {
-            const fresh = await API.getONUs();
-            const t     = document.getElementById('onus-table-body');
-            if (t && fresh) {
-                t.innerHTML = renderONURows(fresh);
-                const on  = fresh.filter(o => o.status === 'online').length;
-                const off = fresh.length - on;
-                if (onlineBadge)  onlineBadge.textContent  = `${on} Online`;
-                if (offlineBadge) { offlineBadge.textContent = `${off} Offline`; offlineBadge.style.display = off > 0 ? 'inline-flex' : 'none'; }
-            }
-        });
+        await _loadMgmtDevices();
+        API.startPolling(async () => { await _loadMgmtDevices(); });
     })();
 
     // Filtros em tempo real
-    const searchInput  = document.getElementById('device-search');
-    const typeFilter   = document.getElementById('device-filter-type');
-    const statusFilter = document.getElementById('device-filter-status');
-
-    const applyDeviceFilters = () => {
-        const query  = (searchInput?.value || '').toLowerCase().trim();
-        const type   = typeFilter?.value   || '';
-        const status = statusFilter?.value || '';
-        let devices  = DeviceStorage.getAll();
-        if (query)  devices = devices.filter(d => d.name.toLowerCase().includes(query) || d.ip.toLowerCase().includes(query) || d.type.toLowerCase().includes(query));
-        if (type)   devices = devices.filter(d => d.type === type);
-        if (status) devices = devices.filter(d => d.status === status);
-        const tbody = document.getElementById('devices-table-body');
-        const count = document.getElementById('devices-count');
-        if (tbody) tbody.innerHTML = renderDeviceRows(devices);
-        if (count) count.innerHTML = `Mostrando <strong>${devices.length}</strong> dispositivo(s)`;
-    };
-
-    searchInput?.addEventListener('input', applyDeviceFilters);
-    typeFilter?.addEventListener('change', applyDeviceFilters);
-    statusFilter?.addEventListener('change', applyDeviceFilters);
+    document.getElementById('device-search')?.addEventListener('input', _applyMgmtFilters);
+    document.getElementById('device-filter-type')?.addEventListener('change', _applyMgmtFilters);
+    document.getElementById('device-filter-status')?.addEventListener('change', _applyMgmtFilters);
 
     // ① ESCANEAR REDE
     const scanBtn = document.getElementById('scan-btn');
@@ -292,7 +278,6 @@ function initDevicesEvents() {
                     </div>`;
             }
 
-            // Simular progresso
             let progress = 0;
             const progressInterval = setInterval(() => {
                 progress = Math.min(progress + Math.random() * 15, 95);
@@ -300,15 +285,12 @@ function initDevicesEvents() {
                 if (bar) bar.style.width = `${progress}%`;
             }, 300);
 
-            // Gerar dispositivos descobertos simulados
             setTimeout(() => {
                 clearInterval(progressInterval);
                 const bar = document.getElementById('scan-bar');
                 if (bar) bar.style.width = '100%';
-
                 const discovered = generateScannedDevices(range);
                 renderScanResults(discovered, resultsEl);
-
                 this.innerHTML = '<i class="fas fa-search"></i> Escanear Rede';
                 this.disabled  = false;
             }, 3000);
@@ -379,39 +361,166 @@ function addScannedDevice(ip, name, type, status, btn) {
     showToast(`"${name}" (${ip}) adicionado com sucesso!`, 'success');
 }
 
+function updateDeviceFormFields() {
+    const type = document.getElementById('new-device-type')?.value;
+    const oltSection     = document.getElementById('new-device-olt-fields');
+    const onuSection     = document.getElementById('new-device-onu-fields');
+    const genericSection = document.getElementById('new-device-generic-fields');
+    if (oltSection)     oltSection.style.display     = type === 'OLT' ? '' : 'none';
+    if (onuSection)     onuSection.style.display     = type === 'ONU' ? '' : 'none';
+    if (genericSection) genericSection.style.display = (type !== 'OLT' && type !== 'ONU') ? '' : 'none';
+}
+
 function openAddDeviceModal() {
     openModal('Adicionar Novo Dispositivo', `
         <div class="form-group">
-            <label class="form-label">Nome do Dispositivo *</label>
-            <input type="text" class="form-control" id="device-name" placeholder="Ex: OLT-01">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Endereço IP *</label>
-            <input type="text" class="form-control" id="device-ip" placeholder="Ex: 10.0.1.10">
-        </div>
-        <div class="form-group">
             <label class="form-label">Tipo de Dispositivo</label>
-            <select class="form-control" id="device-type">
+            <select class="form-control" id="new-device-type" onchange="updateDeviceFormFields()">
                 <option value="OLT">OLT (GPON/XGS-PON)</option>
+                <option value="ONU">ONU (Terminal de Assinante)</option>
                 <option value="Router">Roteador</option>
                 <option value="Switch">Switch Gerenciável</option>
                 <option value="Radio">Rádio Wireless</option>
             </select>
         </div>
-        <div class="form-group">
-            <label class="form-label">Comunidade SNMP</label>
-            <input type="text" class="form-control" id="device-snmp" value="public">
+
+        <!-- Campos para OLT -->
+        <div id="new-device-olt-fields">
+            <div class="form-group">
+                <label class="form-label">Nome / ID *</label>
+                <input type="text" class="form-control" id="olt-name" placeholder="Ex: OLT-04">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Endereço IP *</label>
+                <input type="text" class="form-control" id="olt-ip" placeholder="Ex: 10.0.4.10">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Fabricante</label>
+                    <select class="form-control" id="olt-vendor">
+                        <option>Huawei</option><option>ZTE</option><option>Nokia</option><option>Fiberhome</option><option>Datacom</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Modelo</label>
+                    <input type="text" class="form-control" id="olt-model" placeholder="Ex: MA5800-X2">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Localização (POP)</label>
+                <input type="text" class="form-control" id="olt-location" placeholder="Ex: POP Bairro Leste">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Capacidade (Mbps)</label>
+                <input type="number" class="form-control" id="olt-capacity" value="2500" min="100">
+            </div>
         </div>
-    `, 'Adicionar', () => {
-        const name = document.getElementById('device-name')?.value?.trim();
-        const ip   = document.getElementById('device-ip')?.value?.trim();
-        const type = document.getElementById('device-type')?.value;
-        if (!name || !ip) { showToast('Preencha Nome e IP.', 'warning'); return; }
-        DeviceStorage.add({ name, ip, type });
-        showToast(`"${name}" adicionado com sucesso!`, 'success');
+
+        <!-- Campos para ONU -->
+        <div id="new-device-onu-fields" style="display:none;">
+            <div class="form-group">
+                <label class="form-label">Porta GPON *</label>
+                <select class="form-control" id="onu-gpon-port">
+                    <option value="">Carregando portas...</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Apto / Unidade *</label>
+                    <input type="text" class="form-control" id="onu-apt" placeholder="Ex: Apto 401">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Endereço IP</label>
+                    <input type="text" class="form-control" id="onu-ip" placeholder="Ex: 10.0.1.110">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Nome do Cliente</label>
+                <input type="text" class="form-control" id="onu-client" placeholder="Ex: José Alves">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Serial ONU</label>
+                    <input type="text" class="form-control" id="onu-serial" placeholder="Ex: HW-ONU-000019">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Modelo</label>
+                    <select class="form-control" id="onu-model">
+                        <option value="HG8245Q2">HG8245Q2 (Huawei)</option>
+                        <option value="F660">F660 (ZTE)</option>
+                        <option value="G-010G-T">G-010G-T (Nokia)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Distância da OLT (km)</label>
+                <input type="number" class="form-control" id="onu-distance" value="0.5" step="0.1" min="0.1" max="20">
+            </div>
+        </div>
+
+        <!-- Campos genéricos (Router/Switch/Radio) -->
+        <div id="new-device-generic-fields" style="display:none;">
+            <div class="form-group">
+                <label class="form-label">Nome do Dispositivo *</label>
+                <input type="text" class="form-control" id="generic-name" placeholder="Ex: Switch Sala 03">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Endereço IP *</label>
+                <input type="text" class="form-control" id="generic-ip" placeholder="Ex: 10.0.1.50">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Comunidade SNMP</label>
+                <input type="text" class="form-control" id="device-snmp" value="public">
+            </div>
+        </div>
+    `, 'Adicionar', async () => {
+        const type = document.getElementById('new-device-type')?.value;
+
+        if (type === 'OLT') {
+            const ip       = document.getElementById('olt-ip')?.value?.trim();
+            const name     = document.getElementById('olt-name')?.value?.trim();
+            const vendor   = document.getElementById('olt-vendor')?.value;
+            const model    = document.getElementById('olt-model')?.value?.trim();
+            const location = document.getElementById('olt-location')?.value?.trim();
+            const capacity = document.getElementById('olt-capacity')?.value;
+            if (!ip) { showToast('Preencha o endereço IP da OLT.', 'warning'); return; }
+            API.addOLT({ name: name || undefined, ip, vendor, model, location, capacity });
+            showToast(`OLT adicionada ao monitoramento!`, 'success');
+
+        } else if (type === 'ONU') {
+            const gponPort = document.getElementById('onu-gpon-port')?.value;
+            const apt      = document.getElementById('onu-apt')?.value?.trim();
+            const ip       = document.getElementById('onu-ip')?.value?.trim();
+            const client   = document.getElementById('onu-client')?.value?.trim();
+            const serial   = document.getElementById('onu-serial')?.value?.trim();
+            const model    = document.getElementById('onu-model')?.value;
+            const distance = document.getElementById('onu-distance')?.value;
+            if (!gponPort) { showToast('Selecione a Porta GPON.', 'warning'); return; }
+            if (!apt)      { showToast('Preencha o Apto / Unidade.', 'warning'); return; }
+            API.addONU({ gponPort, apt, ip, client, serial, model, distance });
+            showToast(`ONU "${apt}" adicionada à porta ${gponPort}!`, 'success');
+
+        } else {
+            const name = document.getElementById('generic-name')?.value?.trim();
+            const ip   = document.getElementById('generic-ip')?.value?.trim();
+            if (!name || !ip) { showToast('Preencha Nome e IP.', 'warning'); return; }
+            DeviceStorage.add({ name, ip, type });
+            showToast(`"${name}" adicionado com sucesso!`, 'success');
+        }
+
         closeModal();
-        if (AppState.currentPage === 'devices') navigateTo('devices');
+        setTimeout(() => _loadMgmtDevices(), 400);
     });
+
+    // Carregar portas GPON para o seletor da ONU
+    API.getGponPorts().then(ports => {
+        const sel = document.getElementById('onu-gpon-port');
+        if (sel && ports && ports.length) {
+            sel.innerHTML = ports.map(p =>
+                `<option value="${p.id}">${p.name} (${p.onusOnline}/${p.onusTotal} ONUs • max ${p.maxONUs})</option>`
+            ).join('');
+        }
+    }).catch(() => {});
 }
 
 // ===== ALERTAS =====

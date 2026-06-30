@@ -398,6 +398,82 @@ function getDevices()       { return appState.devices; }
 function addDevice(d)       { const item={...d,id:Date.now(),status:d.status||'online'}; appState.devices.push(item); _addHistory({event:'Dispositivo Adicionado',device:d.name,duration:'--',action:`IP: ${d.ip}`,user:'admin',type:'device'}); return item; }
 function updateDevice(id,f) { appState.devices=appState.devices.map(d=>d.id===id?{...d,...f}:d); return appState.devices.find(d=>d.id===id); }
 function removeDevice(id)   { const d=appState.devices.find(x=>x.id===id); appState.devices=appState.devices.filter(d=>d.id!==id); if(d) _addHistory({event:'Dispositivo Removido',device:d.name,duration:'--',action:`IP: ${d.ip}`,user:'admin',type:'device'}); }
+
+function addOLT(data) {
+    const idx   = OLTS.length;
+    const oltId = data.id || `OLT-${String(idx + 1).padStart(2, '0')}`;
+    const olt   = {
+        id:       oltId,
+        name:     data.name     || oltId,
+        ip:       data.ip,
+        model:    data.model    || 'Unknown',
+        vendor:   data.vendor   || 'Unknown',
+        capacity: parseInt(data.capacity) || 2500,
+        location: data.location || 'Não especificado',
+        maxONUs:  128,
+    };
+    OLTS.push(olt);
+    const portSlot = OLTS.length;
+    const portId   = `0/${portSlot}/0`;
+    GPON_PORTS.push({ id: portId, oltId, name: `${oltId} / GPON ${portId}`, description: 'Porta principal', maxONUs: 8 });
+    snmpState.olts.push({ inRate: 0, outRate: 0 });
+    const dev = {
+        id: Date.now(), name: `${oltId} — ${olt.model}`, ip: olt.ip, type: 'OLT', status: 'online',
+        cpu: 0, memory: 0, temperature: 0, onus_active: 0, onus_total: 0,
+        vendor: olt.vendor, location: olt.location, firmware: 'Unknown', uptime: '0d 00:00:00',
+    };
+    appState.devices.push(dev);
+    _addHistory({ event: `OLT Adicionada — ${oltId}`, device: oltId, duration: '--', action: `IP: ${olt.ip}`, user: 'admin', type: 'device' });
+    return dev;
+}
+
+function addONU(data) {
+    const newId    = Math.max(0, ...ONU_PROFILES.map(o => o.id)) + 1;
+    const portSlot = ONU_PROFILES.filter(p => p.gponPort === data.gponPort).length;
+    const profile  = {
+        id:       newId,
+        client:   data.client   || 'Novo Cliente',
+        apt:      data.apt      || `Unidade ${newId}`,
+        serial:   data.serial   || `NEW-ONU-${String(newId).padStart(6, '0')}`,
+        ip:       data.ip       || '',
+        model:    data.model    || 'HG8245Q2',
+        distance: parseFloat(data.distance) || 0.5,
+        rxBase:   -18,
+        gponPort: data.gponPort,
+        portSlot,
+    };
+    ONU_PROFILES.push(profile);
+    onuState.push({
+        ...profile,
+        status:          'online',
+        rxPower:         profile.rxBase,
+        txPower:         2.5,
+        sfpTemp:         parseFloat(jitter(45, 3).toFixed(1)),
+        sfpVoltage:      parseFloat(jitter(3.3, 0.05).toFixed(3)),
+        ber:             parseFloat((Math.random() * 5e-11).toFixed(15)),
+        latency:         parseFloat((5 + profile.distance * 3).toFixed(1)),
+        uptimeTicks:     0,
+        offlineTimer:    0,
+        offlineCooldown: 0,
+        degraded:        false,
+        lastSeen:        nowStr(),
+        history: {
+            rxPower: Array.from({ length: 120 }, () => jitter(profile.rxBase, 0.4)),
+            latency: Array.from({ length: 120 }, () => jitter(5 + profile.distance * 3, 1.5)),
+        },
+    });
+    const dev = {
+        id: newId, name: `ONU — ${profile.apt}`, client: profile.client, apt: profile.apt,
+        ip: profile.ip, serial: profile.serial, model: profile.model, type: 'ONU',
+        status: 'online', rxPower: profile.rxBase, txPower: 2.5,
+        latency: parseFloat((5 + profile.distance * 3).toFixed(1)),
+        distance: `${profile.distance} km`, uptime: '0d 00:00:00',
+        gponPort: profile.gponPort, port: `${profile.gponPort}:${profile.portSlot}`,
+    };
+    appState.devices.push(dev);
+    _addHistory({ event: `ONU Adicionada — ${profile.apt}`, device: profile.serial, duration: '--', action: `Porta ${profile.gponPort} • IP: ${profile.ip}`, user: 'admin', type: 'device' });
+    return dev;
+}
 function getAlerts()        { return appState.alerts; }
 function resolveAlert(id)   { appState.alerts=appState.alerts.map(a=>a.id===id?{...a,severity:'resolved',resolvedAt:nowStr()}:a); }
 function ignoreAlert(id)    { appState.alerts=appState.alerts.filter(a=>a.id!==id); }
@@ -426,7 +502,7 @@ function saveSettings(s)    { appState.settings={...appState.settings,...s}; ret
 module.exports = {
     getSnapshot, getHistory, getONUs, getGponPorts, getOLTsBandwidth,
     OIDs, GPON_TOPOLOGY, GPON_PORTS, OLTS,
-    getDevices, addDevice, updateDevice, removeDevice,
+    getDevices, addDevice, updateDevice, removeDevice, addOLT, addONU,
     getAlerts, resolveAlert, ignoreAlert, addAlert,
     getRules, addRule, updateRule, toggleRule, removeRule,
     getAppHistory, addHistory,
