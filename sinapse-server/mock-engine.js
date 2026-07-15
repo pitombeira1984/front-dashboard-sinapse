@@ -280,10 +280,16 @@ function _triggerAutoAlert(event) {
     if (event.type === 'onuOffline') {
         const title = `ONU Offline — ${event.onu.apt}`;
         if (appState.alerts.find(a => a.title === title && a.severity !== 'resolved')) return;
-        appState.alerts.unshift({ id:Date.now(), title, source:'auto', description:`${event.onu.client} • ${event.onu.ip} • Porta ${event.onu.gponPort}:${event.onu.portSlot}`, severity:'critical', time:nowStr(), device:'OLT-01' });
+        const description = `${event.onu.client} • ${event.onu.ip} • Porta ${event.onu.gponPort}:${event.onu.portSlot}`;
+        appState.alerts.unshift({ id:Date.now(), title, source:'auto', description, severity:'critical', time:nowStr(), device:'OLT-01' });
+        _addHistory({ event: `Alerta Gerado — ${title}`, device: 'OLT-01', duration: '--', action: description, user: 'Sistema', type: 'alert' });
     }
     if (event.type === 'onuOnline') {
-        appState.alerts = appState.alerts.map(a => a.title === `ONU Offline — ${event.onu.apt}` ? {...a, severity:'resolved', resolvedAt:nowStr()} : a);
+        const title = `ONU Offline — ${event.onu.apt}`;
+        if (appState.alerts.find(a => a.title === title && a.severity !== 'resolved')) {
+            _addHistory({ event: `Alerta Resolvido Automaticamente — ${title}`, device: 'OLT-01', duration: '--', action: `${event.onu.apt} voltou a ficar online`, user: 'Sistema', type: 'alert' });
+        }
+        appState.alerts = appState.alerts.map(a => a.title === title ? {...a, severity:'resolved', resolvedAt:nowStr()} : a);
     }
 }
 
@@ -475,9 +481,22 @@ function addONU(data) {
     return dev;
 }
 function getAlerts()        { return appState.alerts; }
-function resolveAlert(id)   { appState.alerts=appState.alerts.map(a=>a.id===id?{...a,severity:'resolved',resolvedAt:nowStr()}:a); }
-function ignoreAlert(id)    { appState.alerts=appState.alerts.filter(a=>a.id!==id); }
-function addAlert(a)        { const item={...a,id:Date.now(),time:nowStr()}; appState.alerts.unshift(item); return item; }
+function resolveAlert(id)   {
+    const a = appState.alerts.find(x => x.id === id);
+    appState.alerts = appState.alerts.map(x => x.id === id ? { ...x, severity: 'resolved', resolvedAt: nowStr() } : x);
+    if (a) _addHistory({ event: `Alerta Resolvido — ${a.title}`, device: a.device || 'Rede', duration: '--', action: a.description || '--', user: 'admin', type: 'alert' });
+}
+function ignoreAlert(id)    {
+    const a = appState.alerts.find(x => x.id === id);
+    appState.alerts = appState.alerts.filter(x => x.id !== id);
+    if (a) _addHistory({ event: `Alerta Removido — ${a.title}`, device: a.device || 'Rede', duration: '--', action: a.description || '--', user: 'admin', type: 'alert' });
+}
+function addAlert(a)        {
+    const item = { ...a, id: Date.now(), time: nowStr() };
+    appState.alerts.unshift(item);
+    _addHistory({ event: `Alerta Gerado — ${item.title}`, device: item.device || 'Rede', duration: '--', action: item.description || '--', user: 'Sistema', type: 'alert' });
+    return item;
+}
 function getRules()         { return appState.rules; }
 function addRule(r)         { const item={...r,id:Date.now(),active:true}; appState.rules.push(item); return item; }
 function updateRule(id,f)   { appState.rules=appState.rules.map(r=>r.id===id?{...r,...f}:r); return appState.rules.find(r=>r.id===id); }

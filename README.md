@@ -15,9 +15,9 @@ O sistema é composto por **6 páginas funcionais**:
 - **Dashboard** — KPIs por porta GPON, gráficos ao vivo (consumo de banda por OLT e latência GPON) e resumo de SNMP Traps
 - **Dispositivos** — Tabela de ONUs em tempo real + CRUD completo de dispositivos com filtros e descoberta automática de rede
 - **Alertas** — Parâmetros de monitoramento configuráveis pelo operador (limiares, duração, ação), SNMP Traps com reconhecimento e tabela de alertas gerados automaticamente
-- **Análise** — Predição de falhas com modelos de IA (Isolation Forest, Regressão Linear, LSTM) e agendamento de manutenções
-- **Configurações** — Parâmetros de rede, monitoramento, notificações e informações do nó
-- **Histórico** — Auditoria de eventos com filtros, exportação (CSV/JSON/PDF) e sistema de backup/restauração
+- **Análise** — Previsão de falhas por regressão linear sobre a telemetria real (RxPower das ONUs, tráfego e latência), recomendações de ação geradas dinamicamente e agendamento de manutenções
+- **Configurações** — Parâmetros de rede, monitoramento e notificações que atuam de fato sobre as demais páginas (intervalo real de polling, exibição de métricas avançadas, identidade do nó, canais de notificação e política de retenção)
+- **Histórico** — Auditoria de eventos sincronizada com o servidor (inclui o ciclo de vida dos alertas), filtros, exportação (CSV/JSON/PDF) e sistema de backup/restauração
 
 O backend simula respostas SNMP reais enquanto o hardware (Orange Pi) não está disponível — a migração para dados reais exige substituir apenas um arquivo no servidor (`mock-engine.js` → `snmp-engine.js`).
 
@@ -223,15 +223,35 @@ O modal de criação/edição preenche automaticamente nome, operador (`<` / `>`
 
 ### Análise
 
-Análise preditiva e agendamento de manutenções.
+Análise preditiva orientada a dados reais e agendamento de manutenções. A página consome os mesmos dados usados em Dispositivos e Alertas — não há previsões fixas ou fictícias.
 
-**Seletor de período**
-- Botões: 24 Horas / 7 Dias / 30 Dias / Personalizado.
-- Modo "Personalizado" exibe painel com campos de data início/fim e botão "Aplicar".
+**Barra de contexto**
+- Abaixo do cabeçalho: contagem de dispositivos monitorados (`DeviceStorage`), alertas ativos (`AlertStorage`) e horário da última análise executada.
+
+**Motor de previsão (regressão linear)**
+- A cada carga da página (ou clique em "Executar Análise"), o frontend busca `GET /api/device/history` (série de 120 amostras: RxPower por ONU, tráfego e latência da OLT-01) e `GET /api/olts/bandwidth`, e roda uma regressão linear (mínimos quadrados) sobre três séries:
+
+| Sinal | Fonte | Limiar de previsão |
+|-------|-------|---------------------|
+| Degradação óptica por ONU | `onuRxHistory[].history` (RxPower) | −24 dBm (aviso) / −27 dBm (crítico) — mesmos limiares dos Parâmetros de Monitoramento |
+| Saturação do link principal | `traffic.in` da OLT-01 | 85% da capacidade da OLT |
+| Aumento de latência da rede GPON | `latency` (média OLT-01) | 50 ms — mesmo limiar do parâmetro "Latência Alta" |
+
+- Uma tendência só vira previsão se a inclinação for consistente (R² ≥ 0,35 para RxPower / 0,3 para tráfego e latência) e o horizonte estimado for ≤ 90 dias — filtra ruído de curto prazo.
+- O prazo previsto (ETA) é derivado da inclinação real e do `intervalSeconds` informado pelo servidor, exibido em segundos/minutos/horas/dias conforme a urgência; a confiança exibida é o R² do ajuste.
+- Previsões já cobertas por um alerta ativo (`AlertStorage`) recebem a etiqueta "Alerta ativo".
 
 **Previsões de Falhas**
-- Lista com 3 previsões ativas (com percentual de confiança) e recomendações de ação.
-- Cada previsão possui botão "Agendar" que abre o modal de manutenção pré-preenchido com o dispositivo correspondente.
+- Lista dinâmica (`predictions-list`) ordenada por severidade, com dispositivo/ONU real, tendência medida, ETA e confiança. ONUs com cliente cadastrado mostram o ícone ⓘ para abrir o drawer de cliente.
+- Cada previsão tem botão "Agendar", que abre o modal de manutenção com o dispositivo correspondente pré-selecionado (mesma lista de `DeviceStorage` usada em Dispositivos).
+- Quando não há tendência relevante, exibe mensagem de sistema normal em vez de lista vazia.
+
+**Recomendações de Ação**
+- Painel (`recommendations-panel`) gerado a partir da previsão mais urgente, com passos específicos por tipo (óptico / tráfego / latência) e botão "Agendar Manutenção".
+
+**Seletor de período**
+- Botões: 24 Horas / 7 Dias / 30 Dias / Personalizado — cada um define quantas amostras do buffer de 120 pontos entram na regressão (24h → 20, 7d → 60, 30d/Personalizado → 120) e reprocessa a análise automaticamente.
+- Modo "Personalizado" exibe painel com campos de data início/fim e botão "Aplicar" (também reprocessa a análise).
 
 **Manutenções Agendadas (CRUD)**
 - Tabela com: Dispositivo, Data/Hora, Descrição, Duração, Status (agendado/concluído), Ações.
@@ -239,33 +259,50 @@ Análise preditiva e agendamento de manutenções.
 - Ação de cancelar manutenção com confirmação.
 
 **Modelos de IA Ativos**
-- Cards exibindo os 3 modelos em uso: Isolation Forest (92.3%), Regressão Linear (88.7%), LSTM Network (85.1%) — cada um com barra de precisão.
+- Cards descritivos dos modelos em uso: Isolation Forest, Regressão Linear (o modelo efetivamente aplicado nas previsões acima) e LSTM Network.
 
 **Executar Análise**
-- Botão no cabeçalho simula execução de análise (~2s) e exibe modal com resumo dos resultados.
+- Botão no cabeçalho recalcula a análise com dados atualizados do servidor e exibe modal de resumo com a contagem real de previsões, quantas são críticas e quantas já estão correlacionadas a alertas ativos.
 
 ---
 
 ### Configurações
 
-Configuração do sistema SINAPSE.
+Configuração do sistema SINAPSE — os campos aqui salvos deixaram de ser apenas persistidos: cada um passou a alterar de fato o comportamento das demais páginas (`applySettingsRuntime()`, chamada a cada navegação e logo após salvar).
 
 **Abas de navegação**
 
 | Aba | Campos |
 |-----|--------|
 | Geral | Nome do Nó, Fuso Horário, Idioma |
-| Monitoramento | Intervalo de Polling (1/5/10/15 min), Retenção de Dados (3/6/12/24 meses), toggle de Métricas Avançadas |
+| Monitoramento | Intervalo de Polling (5 segundos / 1 / 5 / 10 / 15 min), Retenção de Dados (3/6/12/24 meses), toggle de Métricas Avançadas |
 | Notificações | Toggles Email / Telegram / SMS, campo de email para notificações |
 | Sistema | IP do Nó + Máscara, Gateway, DNS Primário e Secundário, botões "Reiniciar Serviços" e "Reiniciar Sistema" |
 
-- Botão "Salvar Configurações" persiste todos os campos no `SettingsStorage` com feedback visual (cor verde por 1s) e toast de confirmação.
+**Onde cada configuração atua**
+
+| Configuração | Efeito real | Onde aparece |
+|--------------|-------------|---------------|
+| Intervalo de Polling | Define `API.POLL_INTERVAL` — cadência real do polling de métricas/traps. "5 segundos" é o padrão do monitoramento simulado; as opções em minutos existem para quando o hardware real (Orange Pi) estiver em produção | Dashboard, Dispositivos, Alertas, Análise |
+| Coleta Avançada de Métricas | Mostra/oculta os campos SFP (Temp., Tensão, BER, Uptime) nos cards de ONU | Dashboard |
+| Nome do Nó / Endereço IP | Substitui o texto fixo de identificação do nó | Sidebar (todas as páginas) e rodapé do Dashboard |
+| Retenção de Dados | Exibida como política ativa, com link direto de volta para Configurações | Histórico |
+| Email / Telegram / SMS | Filtra, entre os canais configurados na ação de cada parâmetro de monitoramento, quais estão de fato habilitados; o toast de alerta mostra "enviado via X, Y" ou "canais desativados em Configurações" | Alertas (`evaluateMonitoringParams`) |
+
+- Botão "Salvar Configurações" persiste todos os campos no `SettingsStorage` (via `PUT /api/settings`) e aplica as mudanças imediatamente, com feedback visual (cor verde por 1s) e toast de confirmação.
+- **Zona de Perigo:** "Reiniciar Serviços" e "Reiniciar Sistema" (antes sem nenhuma ação associada) agora abrem modal de confirmação, registram o evento em `HistoryStorage` e simulam a operação — o primeiro com toast de conclusão, o segundo recarregando a aplicação após a contagem regressiva.
 
 ---
 
 ### Histórico
 
-Log de eventos e gerenciamento de backups.
+Auditoria real do servidor — dispositivos, alertas, manutenções e backups —, não apenas dados de exemplo.
+
+- **Sincronização com o servidor:** ao entrar na página, `HistoryStorage.sync()` busca `GET /api/history` e substitui o cache local pelo histórico real do servidor. Antes dessa correção, a página exibia apenas os 3 eventos fixos de `sampleData.history` (ou o que sobrasse de sessões anteriores no navegador) e nunca era atualizada a partir do backend.
+- Faixa informativa no topo mostra a política de retenção configurada em Configurações (`dataRetention`), com link direto para a página.
+
+**Eventos de Alertas agora aparecem no Histórico**
+- Resolver, ignorar ou gerar um alerta (manual ou automaticamente, incluindo ONU offline/online) grava um evento com `type: 'alert'` no histórico do servidor — antes, o filtro "Alertas" do dropdown nunca retornava nenhum resultado real, pois nenhum fluxo de alerta gravava histórico.
 
 **Filtros e busca**
 - Campo de texto busca por evento, dispositivo ou ação.
@@ -281,8 +318,8 @@ Log de eventos e gerenciamento de backups.
 - CSV e JSON são baixados automaticamente; PDF abre a janela de impressão do navegador.
 
 **Backup e Restauração**
-- "Criar Backup": persiste snapshot de todos os dados (dispositivos, alertas, regras, configurações) via `BackupStorage.create()` — exibe nome do arquivo e tamanho no toast.
-- "Restaurar Backup": select com todos os backups disponíveis + confirmação modal antes de restaurar.
+- "Criar Backup": persiste snapshot de todos os dados (dispositivos, alertas, regras, configurações, histórico) via `BackupStorage.create()` — exibe nome do arquivo e tamanho no toast.
+- "Restaurar Backup": select com todos os backups disponíveis + confirmação modal antes de restaurar. A restauração agora é aguardada de fato (`await`) antes de sinalizar sucesso e recarregar a página — antes, o toast de "restaurado com sucesso" aparecia antes da restauração terminar, podendo exibir dados desatualizados. O cache local de dispositivos, alertas, regras, configurações **e histórico** é recarregado do servidor após a restauração.
 - Tabela de backups disponíveis com ações de restauração rápida e remoção (ambas com confirmação modal).
 
 ---

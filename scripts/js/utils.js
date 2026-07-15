@@ -122,6 +122,34 @@ function escHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
+// ----- Análise preditiva -----
+// Regressão linear simples (mínimos quadrados) sobre uma série de valores igualmente espaçados.
+// Retorna a inclinação (slope, unidade/amostra), o intercepto e o R² (qualidade do ajuste 0-1).
+function linearRegression(values) {
+    const n = values.length;
+    if (n < 2) return { slope: 0, intercept: values[0] || 0, r2: 0 };
+    const xMean = (n - 1) / 2;
+    const yMean = values.reduce((a, b) => a + b, 0) / n;
+    let num = 0, den = 0;
+    for (let i = 0; i < n; i++) { num += (i - xMean) * (values[i] - yMean); den += (i - xMean) ** 2; }
+    const slope = den === 0 ? 0 : num / den;
+    const intercept = yMean - slope * xMean;
+    let ssTot = 0, ssRes = 0;
+    for (let i = 0; i < n; i++) { const pred = slope * i + intercept; ssRes += (values[i] - pred) ** 2; ssTot += (values[i] - yMean) ** 2; }
+    const r2 = ssTot === 0 ? 0 : Math.max(0, 1 - ssRes / ssTot);
+    return { slope, intercept, r2 };
+}
+
+// Formata uma duração em segundos como texto legível (s / min / h / dias)
+function formatDuration(seconds) {
+    if (seconds < 60) return `${Math.max(1, Math.round(seconds))}s`;
+    const minutes = seconds / 60;
+    if (minutes < 60) return `${Math.round(minutes)} min`;
+    const hours = minutes / 60;
+    if (hours < 48) return `${hours.toFixed(1)} h`;
+    return `${(hours / 24).toFixed(1)} dias`;
+}
+
 // ===== AÇÕES — DISPOSITIVOS =====
 
 function _findDevice(id) {
@@ -397,3 +425,28 @@ const ThemeManager = {
         }
     },
 };
+
+// ===== APLICAÇÃO DE CONFIGURAÇÕES EM TEMPO DE EXECUÇÃO =====
+// Converte o intervalo de polling salvo em Configurações para milissegundos.
+// "5 segundos" preserva o monitoramento em tempo real usado no mock; as opções em
+// minutos existem para quando o hardware real (Orange Pi) estiver em produção.
+function _pollingIntervalToMs(label) {
+    const map = { '5 segundos': 5000, '1 minuto': 60000, '5 minutos': 300000, '10 minutos': 600000, '15 minutos': 900000 };
+    return map[label] !== undefined ? map[label] : 5000;
+}
+
+// Aplica as configurações salvas (SettingsStorage) ao estado em execução da aplicação:
+// intervalo real de polling da API e identidade do nó exibida na sidebar e no rodapé
+// do Dashboard. Chamada ao carregar qualquer página e logo após salvar em Configurações,
+// para que as demais páginas reflitam o que foi definido ali.
+function applySettingsRuntime() {
+    const s = SettingsStorage.get();
+
+    if (typeof API !== 'undefined') API.POLL_INTERVAL = _pollingIntervalToMs(s.pollingInterval);
+
+    const sidebarInfo = document.getElementById('sidebar-node-info');
+    if (sidebarInfo) sidebarInfo.innerHTML = `${escHtml(s.nodeName)}<br>${escHtml(s.ip)}`;
+
+    const footerInfo = document.querySelector('.node-info span');
+    if (footerInfo) footerInfo.textContent = `SINAPSE Node • ${s.nodeName} • ${s.ip}`;
+}

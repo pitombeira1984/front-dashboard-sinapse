@@ -179,6 +179,17 @@ const HistoryStorage = {
     getAll() {
         return Storage.get(this.KEY, sampleData.history.map(h => ({ ...h, user: 'Sistema', type: 'alert' })));
     },
+    // Busca o histórico real do servidor (auditoria de dispositivos, alertas, manutenções e
+    // backups) e atualiza o cache local — sem isso, a página Histórico mostrava apenas os
+    // 3 eventos de exemplo (ou o que sobrou de sessões anteriores neste navegador).
+    async sync() {
+        const serverHistory = await API.getAppHistory();
+        if (serverHistory && Array.isArray(serverHistory)) {
+            Storage.set(this.KEY, serverHistory);
+            return serverHistory;
+        }
+        return this.getAll();
+    },
     async add(item) {
         const newItem = await API.addHistory(item);                  // POST /api/history
         if (newItem) { const list = this.getAll(); list.unshift(newItem); Storage.set(this.KEY, list); }
@@ -200,14 +211,16 @@ const BackupStorage = {
     async restore(id) {
         const result = await API.restoreBackup(id);                  // POST /api/backups/:id/restore
         if (result) {
-            // Após restauração, recarregar dados do servidor no cache local
-            const [devices, alerts, rules, settings] = await Promise.all([
-                API.getDevices(), API.getAllAlerts(), API.getRules(), API.getSettings()
+            // Após restauração, recarregar dados do servidor no cache local (inclui o
+            // histórico, que o servidor também reverte para o snapshot do backup)
+            const [devices, alerts, rules, settings, history] = await Promise.all([
+                API.getDevices(), API.getAllAlerts(), API.getRules(), API.getSettings(), API.getAppHistory()
             ]);
             if (devices)  Storage.set('devices',     devices);
             if (alerts)   Storage.set('alerts',      alerts);
             if (rules)    Storage.set('alert_rules', rules);
             if (settings) Storage.set('settings',    settings);
+            if (history)  Storage.set('history',     history);
         }
         return result;
     },
@@ -224,7 +237,7 @@ const SettingsStorage = {
         nodeName:        'SINAPSE-Node-01',
         timezone:        'America/Fortaleza (UTC-3)',
         language:        'Português (Brasil)',
-        pollingInterval: '5 minutos',
+        pollingInterval: '5 segundos',
         dataRetention:   '6 meses',
         advancedMetrics: true,
         notifyEmail:     true,
