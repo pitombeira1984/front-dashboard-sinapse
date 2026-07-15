@@ -425,3 +425,28 @@ const ThemeManager = {
         }
     },
 };
+
+// ===== APLICAÇÃO DE CONFIGURAÇÕES EM TEMPO DE EXECUÇÃO =====
+// Converte o intervalo de polling salvo em Configurações para milissegundos.
+// "5 segundos" preserva o monitoramento em tempo real usado no mock; as opções em
+// minutos existem para quando o hardware real (Orange Pi) estiver em produção.
+function _pollingIntervalToMs(label) {
+    const map = { '5 segundos': 5000, '1 minuto': 60000, '5 minutos': 300000, '10 minutos': 600000, '15 minutos': 900000 };
+    return map[label] !== undefined ? map[label] : 5000;
+}
+
+// Aplica as configurações salvas (SettingsStorage) ao estado em execução da aplicação:
+// intervalo real de polling da API e identidade do nó exibida na sidebar e no rodapé
+// do Dashboard. Chamada ao carregar qualquer página e logo após salvar em Configurações,
+// para que as demais páginas reflitam o que foi definido ali.
+function applySettingsRuntime() {
+    const s = SettingsStorage.get();
+
+    if (typeof API !== 'undefined') API.POLL_INTERVAL = _pollingIntervalToMs(s.pollingInterval);
+
+    const sidebarInfo = document.getElementById('sidebar-node-info');
+    if (sidebarInfo) sidebarInfo.innerHTML = `${escHtml(s.nodeName)}<br>${escHtml(s.ip)}`;
+
+    const footerInfo = document.querySelector('.node-info span');
+    if (footerInfo) footerInfo.textContent = `SINAPSE Node • ${s.nodeName} • ${s.ip}`;
+}

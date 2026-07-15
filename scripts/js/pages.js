@@ -53,6 +53,8 @@ function renderAlertItems(alerts) {
 
 function renderDeviceCards(devices) {
     if (!devices || !devices.length) return `<div style="color:var(--text-muted);padding:1.5rem;text-align:center;grid-column:1/-1;">Nenhum dispositivo encontrado.</div>`;
+    // "Coleta Avançada de Métricas" (Configurações) controla a exibição dos campos SFP/BER nos cards de ONU
+    const advancedMetrics = (typeof SettingsStorage !== 'undefined') ? SettingsStorage.get().advancedMetrics : true;
     return devices.map(d => {
         const rxColor = d.rxPower !== undefined ? (d.rxPower < -27 ? 'var(--danger-color)' : d.rxPower < -24 ? 'var(--warning-color)' : 'var(--success-color)') : 'var(--text-primary)';
         return `
@@ -80,10 +82,12 @@ function renderDeviceCards(devices) {
                     return `
                     <div class="metric"><div class="metric-label">RxPower</div><div class="metric-value" style="color:${rxColor};">${d.status === 'online' ? (d.rxPower ?? '--') + ' dBm' : '--'}</div></div>
                     <div class="metric"><div class="metric-label">TxPower</div><div class="metric-value" style="color:${txColor};">${d.status === 'online' ? (d.txPower ?? '--') + ' dBm' : '--'}</div></div>
+                    ${advancedMetrics ? `
                     <div class="metric"><div class="metric-label">Temp. SFP</div><div class="metric-value" style="color:${sfpColor};">${d.status === 'online' ? (d.sfpTemp ?? '--') + ' °C' : '--'}</div></div>
                     <div class="metric"><div class="metric-label">Tensão SFP</div><div class="metric-value" style="color:${vColor};">${d.status === 'online' ? (d.sfpVoltage ?? '--') + ' V' : '--'}</div></div>
                     <div class="metric"><div class="metric-label">BER</div><div class="metric-value" style="color:${berColor};font-size:0.8rem;">${d.status === 'online' ? berFmt(d.ber) : '--'}</div></div>
                     <div class="metric"><div class="metric-label">Uptime SFP</div><div class="metric-value" style="font-size:0.75rem;">${d.status === 'online' ? (d.uptime ?? '--') : '--'}</div></div>
+                    ` : ''}
                     <div class="metric"><div class="metric-label">Latência</div><div class="metric-value">${d.status === 'online' ? (d.latency ?? '--') + ' ms' : '--'}</div></div>
                     <div class="metric"><div class="metric-label">Distância</div><div class="metric-value">${d.distance ?? '--'}</div></div>
                     <div class="metric metric-cliente"><div class="metric-label">Cliente</div><div class="metric-value" style="font-size:0.75rem;display:flex;align-items:center;gap:0.4rem;">${d.client ?? '--'}${d.id ? `<button class="client-info-btn" onclick="openClientDrawer(${d.id})" title="Ver informações do cliente"><i class="fas fa-info-circle"></i></button>` : ''}</div></div>`;
@@ -260,6 +264,7 @@ function renderBackupOptions(backups) {
 
 // DASHBOARD
 function getDashboardContent() {
+    const nodeSettings = SettingsStorage.get();
     return `
         <header class="header">
             <div class="header-title">
@@ -365,7 +370,7 @@ function getDashboardContent() {
         <div id="trap-summary-placeholder"></div>
 
         <footer class="footer">
-            <div class="node-info"><i class="fas fa-microchip"></i> <span>SINAPSE Node • Orange Pi 3B • 192.168.1.100</span></div>
+            <div class="node-info"><i class="fas fa-microchip"></i> <span>SINAPSE Node • ${nodeSettings.nodeName} • ${nodeSettings.ip}</span></div>
             <div><span id="data-update">Última atualização: --:--:--</span></div>
         </footer>`;
 }
@@ -720,17 +725,19 @@ function getSettingsContent() {
                 <h3 style="margin-bottom:1.5rem;">Configurações de Monitoramento</h3>
                 <div class="form-group"><label class="form-label">Intervalo de Polling (SNMP)</label>
                     <select class="form-control" id="cfg-pollingInterval">
-                        ${['1 minuto','5 minutos','10 minutos','15 minutos'].map(v => `<option ${s.pollingInterval === v ? 'selected' : ''}>${v}</option>`).join('')}
+                        ${['5 segundos','1 minuto','5 minutos','10 minutos','15 minutos'].map(v => `<option ${s.pollingInterval === v ? 'selected' : ''}>${v}</option>`).join('')}
                     </select>
+                    <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.35rem;">Controla o intervalo real de atualização do Dashboard, Dispositivos e Alertas. "5 segundos" é o padrão para o monitoramento simulado; intervalos maiores reduzem a carga sobre o hardware SNMP real.</div>
                 </div>
                 <div class="form-group"><label class="form-label">Retenção de Dados</label>
                     <select class="form-control" id="cfg-dataRetention">
                         ${['3 meses','6 meses','12 meses','24 meses'].map(v => `<option ${s.dataRetention === v ? 'selected' : ''}>${v}</option>`).join('')}
                     </select>
+                    <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.35rem;">Exibida como política ativa na página Histórico.</div>
                 </div>
                 <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
                     <label class="toggle-switch"><input type="checkbox" id="cfg-advancedMetrics" ${s.advancedMetrics ? 'checked' : ''}><span class="toggle-slider"></span></label>
-                    <div><div style="font-weight:600;">Coleta Avançada de Métricas</div><div style="color:var(--text-secondary);font-size:0.875rem;">Coleta detalhada de métricas de performance</div></div>
+                    <div><div style="font-weight:600;">Coleta Avançada de Métricas</div><div style="color:var(--text-secondary);font-size:0.875rem;">Exibe SFP (temperatura, tensão, BER, uptime) nos cards de ONU do Dashboard, além dos indicadores básicos</div></div>
                 </div>
             </div>
         </div>
@@ -770,8 +777,8 @@ function getSettingsContent() {
                 </div>
                 <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border-color);">
                     <h3 style="margin-bottom:1rem;color:var(--danger-color);">Zona de Perigo</h3>
-                    <button class="btn btn-danger" style="margin-right:1rem;"><i class="fas fa-redo"></i> Reiniciar Serviços</button>
-                    <button class="btn btn-danger"><i class="fas fa-power-off"></i> Reiniciar Sistema</button>
+                    <button class="btn btn-danger" style="margin-right:1rem;" id="restart-services-btn"><i class="fas fa-redo"></i> Reiniciar Serviços</button>
+                    <button class="btn btn-danger" id="restart-system-btn"><i class="fas fa-power-off"></i> Reiniciar Sistema</button>
                 </div>
             </div>
         </div>`;
@@ -779,8 +786,9 @@ function getSettingsContent() {
 
 // HISTÓRICO
 function getHistoryContent() {
-    const history = HistoryStorage.getAll();
-    const backups = BackupStorage.getAll();
+    const history  = HistoryStorage.getAll();
+    const backups  = BackupStorage.getAll();
+    const settings = SettingsStorage.get();
     return `
         <header class="header">
             <div class="header-title">
@@ -791,6 +799,12 @@ function getHistoryContent() {
                 <button class="btn btn-secondary" id="export-history-btn"><i class="fas fa-download"></i> Exportar</button>
             </div>
         </header>
+
+        <div style="color:var(--text-secondary);font-size:0.8rem;margin-bottom:1rem;">
+            <i class="fas fa-database" style="color:var(--primary-color);margin-right:0.35rem;"></i>
+            Política de retenção ativa: <strong>${settings.dataRetention}</strong>
+            <a href="#" onclick="event.preventDefault();navigateTo('settings');" style="color:var(--secondary-color);margin-left:0.5rem;">alterar em Configurações</a>
+        </div>
 
         <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;align-items:center;">
             <input type="text" id="history-search" class="form-control" placeholder="Buscar evento, dispositivo ou ação..." style="flex:1;min-width:250px;">

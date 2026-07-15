@@ -224,7 +224,7 @@ const SettingsStorage = {
         nodeName:        'SINAPSE-Node-01',
         timezone:        'America/Fortaleza (UTC-3)',
         language:        'Português (Brasil)',
-        pollingInterval: '5 minutos',
+        pollingInterval: '5 segundos',
         dataRetention:   '6 meses',
         advancedMetrics: true,
         notifyEmail:     true,

@@ -16,7 +16,7 @@ O sistema é composto por **6 páginas funcionais**:
 - **Dispositivos** — Tabela de ONUs em tempo real + CRUD completo de dispositivos com filtros e descoberta automática de rede
 - **Alertas** — Parâmetros de monitoramento configuráveis pelo operador (limiares, duração, ação), SNMP Traps com reconhecimento e tabela de alertas gerados automaticamente
 - **Análise** — Previsão de falhas por regressão linear sobre a telemetria real (RxPower das ONUs, tráfego e latência), recomendações de ação geradas dinamicamente e agendamento de manutenções
-- **Configurações** — Parâmetros de rede, monitoramento, notificações e informações do nó
+- **Configurações** — Parâmetros de rede, monitoramento e notificações que atuam de fato sobre as demais páginas (intervalo real de polling, exibição de métricas avançadas, identidade do nó, canais de notificação e política de retenção)
 - **Histórico** — Auditoria de eventos com filtros, exportação (CSV/JSON/PDF) e sistema de backup/restauração
 
 O backend simula respostas SNMP reais enquanto o hardware (Orange Pi) não está disponível — a migração para dados reais exige substituir apenas um arquivo no servidor (`mock-engine.js` → `snmp-engine.js`).
@@ -266,24 +266,37 @@ Análise preditiva orientada a dados reais e agendamento de manutenções. A pá
 
 ### Configurações
 
-Configuração do sistema SINAPSE.
+Configuração do sistema SINAPSE — os campos aqui salvos deixaram de ser apenas persistidos: cada um passou a alterar de fato o comportamento das demais páginas (`applySettingsRuntime()`, chamada a cada navegação e logo após salvar).
 
 **Abas de navegação**
 
 | Aba | Campos |
 |-----|--------|
 | Geral | Nome do Nó, Fuso Horário, Idioma |
-| Monitoramento | Intervalo de Polling (1/5/10/15 min), Retenção de Dados (3/6/12/24 meses), toggle de Métricas Avançadas |
+| Monitoramento | Intervalo de Polling (5 segundos / 1 / 5 / 10 / 15 min), Retenção de Dados (3/6/12/24 meses), toggle de Métricas Avançadas |
 | Notificações | Toggles Email / Telegram / SMS, campo de email para notificações |
 | Sistema | IP do Nó + Máscara, Gateway, DNS Primário e Secundário, botões "Reiniciar Serviços" e "Reiniciar Sistema" |
 
-- Botão "Salvar Configurações" persiste todos os campos no `SettingsStorage` com feedback visual (cor verde por 1s) e toast de confirmação.
+**Onde cada configuração atua**
+
+| Configuração | Efeito real | Onde aparece |
+|--------------|-------------|---------------|
+| Intervalo de Polling | Define `API.POLL_INTERVAL` — cadência real do polling de métricas/traps. "5 segundos" é o padrão do monitoramento simulado; as opções em minutos existem para quando o hardware real (Orange Pi) estiver em produção | Dashboard, Dispositivos, Alertas, Análise |
+| Coleta Avançada de Métricas | Mostra/oculta os campos SFP (Temp., Tensão, BER, Uptime) nos cards de ONU | Dashboard |
+| Nome do Nó / Endereço IP | Substitui o texto fixo de identificação do nó | Sidebar (todas as páginas) e rodapé do Dashboard |
+| Retenção de Dados | Exibida como política ativa, com link direto de volta para Configurações | Histórico |
+| Email / Telegram / SMS | Filtra, entre os canais configurados na ação de cada parâmetro de monitoramento, quais estão de fato habilitados; o toast de alerta mostra "enviado via X, Y" ou "canais desativados em Configurações" | Alertas (`evaluateMonitoringParams`) |
+
+- Botão "Salvar Configurações" persiste todos os campos no `SettingsStorage` (via `PUT /api/settings`) e aplica as mudanças imediatamente, com feedback visual (cor verde por 1s) e toast de confirmação.
+- **Zona de Perigo:** "Reiniciar Serviços" e "Reiniciar Sistema" (antes sem nenhuma ação associada) agora abrem modal de confirmação, registram o evento em `HistoryStorage` e simulam a operação — o primeiro com toast de conclusão, o segundo recarregando a aplicação após a contagem regressiva.
 
 ---
 
 ### Histórico
 
 Log de eventos e gerenciamento de backups.
+
+- Faixa informativa no topo mostra a política de retenção configurada em Configurações (`dataRetention`), com link direto para a página.
 
 **Filtros e busca**
 - Campo de texto busca por evento, dispositivo ou ação.
