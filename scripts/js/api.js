@@ -128,6 +128,7 @@ const API = {
     async deleteRule(id)         { return this._fetchDelete(`/api/rules/${id}`); },
 
     // ── Histórico ──────────────────────────────────────────────────────────
+    async getAppHistory()        { return this._fetch('/api/history'); },
     async addHistory(item)       { const r = await this._fetchPost('/api/history', item); return r?.data ?? null; },
 
     // ── Configurações ──────────────────────────────────────────────────────

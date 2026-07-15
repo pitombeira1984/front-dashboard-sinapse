@@ -17,7 +17,7 @@ O sistema é composto por **6 páginas funcionais**:
 - **Alertas** — Parâmetros de monitoramento configuráveis pelo operador (limiares, duração, ação), SNMP Traps com reconhecimento e tabela de alertas gerados automaticamente
 - **Análise** — Previsão de falhas por regressão linear sobre a telemetria real (RxPower das ONUs, tráfego e latência), recomendações de ação geradas dinamicamente e agendamento de manutenções
 - **Configurações** — Parâmetros de rede, monitoramento e notificações que atuam de fato sobre as demais páginas (intervalo real de polling, exibição de métricas avançadas, identidade do nó, canais de notificação e política de retenção)
-- **Histórico** — Auditoria de eventos com filtros, exportação (CSV/JSON/PDF) e sistema de backup/restauração
+- **Histórico** — Auditoria de eventos sincronizada com o servidor (inclui o ciclo de vida dos alertas), filtros, exportação (CSV/JSON/PDF) e sistema de backup/restauração
 
 O backend simula respostas SNMP reais enquanto o hardware (Orange Pi) não está disponível — a migração para dados reais exige substituir apenas um arquivo no servidor (`mock-engine.js` → `snmp-engine.js`).
 
@@ -294,9 +294,13 @@ Configuração do sistema SINAPSE — os campos aqui salvos deixaram de ser apen
 
 ### Histórico
 
-Log de eventos e gerenciamento de backups.
+Auditoria real do servidor — dispositivos, alertas, manutenções e backups —, não apenas dados de exemplo.
 
+- **Sincronização com o servidor:** ao entrar na página, `HistoryStorage.sync()` busca `GET /api/history` e substitui o cache local pelo histórico real do servidor. Antes dessa correção, a página exibia apenas os 3 eventos fixos de `sampleData.history` (ou o que sobrasse de sessões anteriores no navegador) e nunca era atualizada a partir do backend.
 - Faixa informativa no topo mostra a política de retenção configurada em Configurações (`dataRetention`), com link direto para a página.
+
+**Eventos de Alertas agora aparecem no Histórico**
+- Resolver, ignorar ou gerar um alerta (manual ou automaticamente, incluindo ONU offline/online) grava um evento com `type: 'alert'` no histórico do servidor — antes, o filtro "Alertas" do dropdown nunca retornava nenhum resultado real, pois nenhum fluxo de alerta gravava histórico.
 
 **Filtros e busca**
 - Campo de texto busca por evento, dispositivo ou ação.
@@ -312,8 +316,8 @@ Log de eventos e gerenciamento de backups.
 - CSV e JSON são baixados automaticamente; PDF abre a janela de impressão do navegador.
 
 **Backup e Restauração**
-- "Criar Backup": persiste snapshot de todos os dados (dispositivos, alertas, regras, configurações) via `BackupStorage.create()` — exibe nome do arquivo e tamanho no toast.
-- "Restaurar Backup": select com todos os backups disponíveis + confirmação modal antes de restaurar.
+- "Criar Backup": persiste snapshot de todos os dados (dispositivos, alertas, regras, configurações, histórico) via `BackupStorage.create()` — exibe nome do arquivo e tamanho no toast.
+- "Restaurar Backup": select com todos os backups disponíveis + confirmação modal antes de restaurar. A restauração agora é aguardada de fato (`await`) antes de sinalizar sucesso e recarregar a página — antes, o toast de "restaurado com sucesso" aparecia antes da restauração terminar, podendo exibir dados desatualizados. O cache local de dispositivos, alertas, regras, configurações **e histórico** é recarregado do servidor após a restauração.
 - Tabela de backups disponíveis com ações de restauração rápida e remoção (ambas com confirmação modal).
 
 ---

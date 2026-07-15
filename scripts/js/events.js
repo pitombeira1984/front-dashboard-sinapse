@@ -1287,6 +1287,13 @@ function initHistoryEvents() {
     document.getElementById('history-search')?.addEventListener('input', applyHistoryFilters);
     document.getElementById('history-filter-type')?.addEventListener('change', applyHistoryFilters);
     document.getElementById('history-filter-period')?.addEventListener('change', applyHistoryFilters);
+
+    // Carga inicial: sincroniza com a auditoria real do servidor (dispositivos, alertas,
+    // manutenções e backups) — sem isso a tabela ficava presa nos 3 eventos de exemplo.
+    (async () => {
+        await HistoryStorage.sync();
+        applyHistoryFilters();
+    })();
     document.getElementById('apply-history-filters')?.addEventListener('click', applyHistoryFilters);
 
     // ⑤ EXPORTAR
@@ -1351,13 +1358,23 @@ function initHistoryEvents() {
                     Os dados atuais de dispositivos, alertas, regras e configurações serão substituídos pelos dados do backup.
                 </p>
             </div>
-        `, 'Restaurar', () => {
-            BackupStorage.restore(backupId);
-            showToast(`Backup "${backup?.filename}" restaurado com sucesso!`, 'success');
-            closeModal();
-            navigateTo('history');
-        });
+        `, 'Restaurar', () => _performRestore(backupId, backup?.filename));
     });
+}
+
+// Restaura um backup e só sinaliza sucesso/re-renderiza a página depois que o cache local
+// (dispositivos, alertas, regras, configurações e histórico) foi efetivamente atualizado —
+// evita mostrar "restaurado com sucesso" enquanto a restauração ainda está em andamento.
+async function _performRestore(id, filename) {
+    closeModal();
+    showToast(`Restaurando backup${filename ? ' "' + filename + '"' : ''}...`, 'warning');
+    const result = await BackupStorage.restore(id);
+    if (result) {
+        showToast(`Backup${filename ? ' "' + filename + '"' : ''} restaurado com sucesso!`, 'success');
+        navigateTo('history');
+    } else {
+        showToast('Erro ao restaurar backup. Verifique o servidor.', 'error');
+    }
 }
 
 // Ação rápida de restaurar na tabela de backups
@@ -1369,12 +1386,7 @@ function quickRestoreBackup(id) {
             <p>Restaurar <strong>${backup?.filename}</strong>?</p>
             <p style="color:var(--text-secondary);font-size:0.875rem;margin-top:0.5rem;">Esta ação substituirá os dados atuais.</p>
         </div>
-    `, 'Restaurar', () => {
-        BackupStorage.restore(id);
-        showToast(`Backup restaurado com sucesso!`, 'success');
-        closeModal();
-        navigateTo('history');
-    });
+    `, 'Restaurar', () => _performRestore(id, backup?.filename));
 }
 
 // ===== DRAWER DE INFORMAÇÕES DO CLIENTE =====
