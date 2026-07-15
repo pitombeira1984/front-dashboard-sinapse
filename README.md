@@ -15,7 +15,7 @@ O sistema é composto por **6 páginas funcionais**:
 - **Dashboard** — KPIs por porta GPON, gráficos ao vivo (consumo de banda por OLT e latência GPON) e resumo de SNMP Traps
 - **Dispositivos** — Tabela de ONUs em tempo real + CRUD completo de dispositivos com filtros e descoberta automática de rede
 - **Alertas** — Parâmetros de monitoramento configuráveis pelo operador (limiares, duração, ação), SNMP Traps com reconhecimento e tabela de alertas gerados automaticamente
-- **Análise** — Predição de falhas com modelos de IA (Isolation Forest, Regressão Linear, LSTM) e agendamento de manutenções
+- **Análise** — Previsão de falhas por regressão linear sobre a telemetria real (RxPower das ONUs, tráfego e latência), recomendações de ação geradas dinamicamente e agendamento de manutenções
 - **Configurações** — Parâmetros de rede, monitoramento, notificações e informações do nó
 - **Histórico** — Auditoria de eventos com filtros, exportação (CSV/JSON/PDF) e sistema de backup/restauração
 
@@ -221,15 +221,35 @@ O modal de criação/edição preenche automaticamente nome, operador (`<` / `>`
 
 ### Análise
 
-Análise preditiva e agendamento de manutenções.
+Análise preditiva orientada a dados reais e agendamento de manutenções. A página consome os mesmos dados usados em Dispositivos e Alertas — não há previsões fixas ou fictícias.
 
-**Seletor de período**
-- Botões: 24 Horas / 7 Dias / 30 Dias / Personalizado.
-- Modo "Personalizado" exibe painel com campos de data início/fim e botão "Aplicar".
+**Barra de contexto**
+- Abaixo do cabeçalho: contagem de dispositivos monitorados (`DeviceStorage`), alertas ativos (`AlertStorage`) e horário da última análise executada.
+
+**Motor de previsão (regressão linear)**
+- A cada carga da página (ou clique em "Executar Análise"), o frontend busca `GET /api/device/history` (série de 120 amostras: RxPower por ONU, tráfego e latência da OLT-01) e `GET /api/olts/bandwidth`, e roda uma regressão linear (mínimos quadrados) sobre três séries:
+
+| Sinal | Fonte | Limiar de previsão |
+|-------|-------|---------------------|
+| Degradação óptica por ONU | `onuRxHistory[].history` (RxPower) | −24 dBm (aviso) / −27 dBm (crítico) — mesmos limiares dos Parâmetros de Monitoramento |
+| Saturação do link principal | `traffic.in` da OLT-01 | 85% da capacidade da OLT |
+| Aumento de latência da rede GPON | `latency` (média OLT-01) | 50 ms — mesmo limiar do parâmetro "Latência Alta" |
+
+- Uma tendência só vira previsão se a inclinação for consistente (R² ≥ 0,35 para RxPower / 0,3 para tráfego e latência) e o horizonte estimado for ≤ 90 dias — filtra ruído de curto prazo.
+- O prazo previsto (ETA) é derivado da inclinação real e do `intervalSeconds` informado pelo servidor, exibido em segundos/minutos/horas/dias conforme a urgência; a confiança exibida é o R² do ajuste.
+- Previsões já cobertas por um alerta ativo (`AlertStorage`) recebem a etiqueta "Alerta ativo".
 
 **Previsões de Falhas**
-- Lista com 3 previsões ativas (com percentual de confiança) e recomendações de ação.
-- Cada previsão possui botão "Agendar" que abre o modal de manutenção pré-preenchido com o dispositivo correspondente.
+- Lista dinâmica (`predictions-list`) ordenada por severidade, com dispositivo/ONU real, tendência medida, ETA e confiança. ONUs com cliente cadastrado mostram o ícone ⓘ para abrir o drawer de cliente.
+- Cada previsão tem botão "Agendar", que abre o modal de manutenção com o dispositivo correspondente pré-selecionado (mesma lista de `DeviceStorage` usada em Dispositivos).
+- Quando não há tendência relevante, exibe mensagem de sistema normal em vez de lista vazia.
+
+**Recomendações de Ação**
+- Painel (`recommendations-panel`) gerado a partir da previsão mais urgente, com passos específicos por tipo (óptico / tráfego / latência) e botão "Agendar Manutenção".
+
+**Seletor de período**
+- Botões: 24 Horas / 7 Dias / 30 Dias / Personalizado — cada um define quantas amostras do buffer de 120 pontos entram na regressão (24h → 20, 7d → 60, 30d/Personalizado → 120) e reprocessa a análise automaticamente.
+- Modo "Personalizado" exibe painel com campos de data início/fim e botão "Aplicar" (também reprocessa a análise).
 
 **Manutenções Agendadas (CRUD)**
 - Tabela com: Dispositivo, Data/Hora, Descrição, Duração, Status (agendado/concluído), Ações.
@@ -237,10 +257,10 @@ Análise preditiva e agendamento de manutenções.
 - Ação de cancelar manutenção com confirmação.
 
 **Modelos de IA Ativos**
-- Cards exibindo os 3 modelos em uso: Isolation Forest (92.3%), Regressão Linear (88.7%), LSTM Network (85.1%) — cada um com barra de precisão.
+- Cards descritivos dos modelos em uso: Isolation Forest, Regressão Linear (o modelo efetivamente aplicado nas previsões acima) e LSTM Network.
 
 **Executar Análise**
-- Botão no cabeçalho simula execução de análise (~2s) e exibe modal com resumo dos resultados.
+- Botão no cabeçalho recalcula a análise com dados atualizados do servidor e exibe modal de resumo com a contagem real de previsões, quantas são críticas e quantas já estão correlacionadas a alertas ativos.
 
 ---
 

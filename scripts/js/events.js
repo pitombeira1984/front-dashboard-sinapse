@@ -917,8 +917,145 @@ function evaluateMonitoringParams(data) {
 }
 
 // ===== ANÁLISE =====
+
+// Nº de amostras de telemetria (ciclos de coleta) a considerar na regressão, por período selecionado.
+// O buffer do servidor guarda no máximo 120 amostras — os períodos maiores usam toda a janela disponível.
+function _lookbackForRange(range) {
+    switch (range) {
+        case '24h': return 20;
+        case '7d':  return 60;
+        default:    return 120; // 30d / custom
+    }
+}
+
+let _lastPredictions = [];
+
+// Executa a análise preditiva com base em telemetria real (RxPower das ONUs, tráfego e
+// latência do link principal) obtida do servidor, e atualiza as seções de Previsões e
+// Recomendações. Isso conecta a página de Análise aos mesmos dados usados em
+// Dispositivos e Alertas, em vez de exibir previsões fixas.
+async function runPredictiveAnalysis(showResultModal = false) {
+    const listEl  = document.getElementById('predictions-list');
+    const panelEl = document.getElementById('recommendations-panel');
+    const badgeEl = document.getElementById('predictions-badge');
+
+    const lookback = _lookbackForRange(AppState.currentTimeRange);
+    const [history, oltBw] = await Promise.all([API.getHistory(), API.getOLTsBandwidth()]);
+    const SAMPLE_INTERVAL_SEC = history?.intervalSeconds || (API.POLL_INTERVAL / 1000);
+    const activeAlerts = AlertStorage.getAll().filter(a => a.severity !== 'resolved');
+
+    const predictions = [];
+
+    // 1 — Degradação óptica por ONU (tendência de queda no RxPower)
+    (history?.onuRxHistory || []).forEach(onu => {
+        const samples = (onu.history || []).slice(-lookback);
+        if (samples.length < 12) return;
+        const { slope, r2 } = linearRegression(samples);
+        if (slope >= -0.003 || r2 < 0.35) return; // sem tendência de queda estatisticamente relevante
+        const current = onu.current;
+        if (current <= -27) return; // já em nível crítico — tratado como alerta, não previsão
+        const threshold = current > -24 ? -24 : -27;
+        const samplesToThreshold = (threshold - current) / slope;
+        if (!isFinite(samplesToThreshold) || samplesToThreshold <= 0) return;
+        const seconds = samplesToThreshold * SAMPLE_INTERVAL_SEC;
+        if (seconds > 90 * 86400) return; // fora do horizonte relevante de previsão
+
+        predictions.push({
+            id:            `onu-${onu.id}`,
+            kind:          'optical',
+            severity:      threshold === -27 ? 'critical' : 'warning',
+            title:         `Degradação Óptica em ONU — ${onu.apt}`,
+            detail:        `${onu.client} • RxPower atual: ${current.toFixed(2)} dBm • Tendência: ${(slope * 10).toFixed(3)} dB/10 ciclos`,
+            etaLabel:      formatDuration(seconds),
+            confidence:    Math.round(Math.min(97, Math.max(35, r2 * 100))),
+            deviceTarget:  `ONU — ${onu.apt}`,
+            onuId:         onu.id,
+            hasActiveAlert: activeAlerts.some(a => a.device && a.device.includes(onu.apt)),
+        });
+    });
+
+    // 2 — Saturação do link principal (tráfego de entrada da OLT-01)
+    const olt01 = (oltBw || []).find(o => o.id === 'OLT-01');
+    const trafficSamples = (history?.traffic || []).slice(-lookback).map(t => t.in);
+    if (olt01 && trafficSamples.length >= 12) {
+        const { slope, r2 } = linearRegression(trafficSamples);
+        const threshold = olt01.capacity * 0.85;
+        const current   = trafficSamples[trafficSamples.length - 1];
+        if (slope > 0.01 && r2 >= 0.3 && current < threshold) {
+            const seconds = ((threshold - current) / slope) * SAMPLE_INTERVAL_SEC;
+            if (seconds > 0 && seconds <= 90 * 86400) {
+                predictions.push({
+                    id:            'olt01-traffic',
+                    kind:          'traffic',
+                    severity:      current / olt01.capacity > 0.7 ? 'warning' : 'info',
+                    title:         `Saturação de Link — ${olt01.name}`,
+                    detail:        `Tráfego de entrada em ${current.toFixed(0)} Mbps de ${olt01.capacity} Mbps (${(current / olt01.capacity * 100).toFixed(1)}%) • Em crescimento`,
+                    etaLabel:      formatDuration(seconds),
+                    confidence:    Math.round(Math.min(95, Math.max(35, r2 * 100))),
+                    deviceTarget:  `${olt01.id} — ${olt01.model}`,
+                    hasActiveAlert: activeAlerts.some(a => a.device === olt01.id || a.device === olt01.name),
+                });
+            }
+        }
+    }
+
+    // 3 — Aumento de latência média na rede GPON (OLT-01)
+    const latencySamples = (history?.latency || []).slice(-lookback);
+    if (latencySamples.length >= 12) {
+        const { slope, r2 } = linearRegression(latencySamples);
+        const threshold = MONITORING_PARAM_TYPES.latencyHigh.defaultThreshold;
+        const current   = latencySamples[latencySamples.length - 1];
+        if (slope > 0.002 && r2 >= 0.3 && current < threshold) {
+            const seconds = ((threshold - current) / slope) * SAMPLE_INTERVAL_SEC;
+            if (seconds > 0 && seconds <= 90 * 86400) {
+                predictions.push({
+                    id:            'olt01-latency',
+                    kind:          'latency',
+                    severity:      'warning',
+                    title:         'Aumento de Latência — Rede GPON',
+                    detail:        `Latência média atual: ${current.toFixed(1)} ms • Tendência de alta`,
+                    etaLabel:      formatDuration(seconds),
+                    confidence:    Math.round(Math.min(95, Math.max(35, r2 * 100))),
+                    deviceTarget:  `${olt01?.id || 'OLT-01'} — ${olt01?.model || 'MA5800-X2'}`,
+                    hasActiveAlert: activeAlerts.some(a => (a.title || '').toLowerCase().includes('latência')),
+                });
+            }
+        }
+    }
+
+    const sevOrder = { critical: 0, warning: 1, info: 2 };
+    predictions.sort((a, b) => sevOrder[a.severity] - sevOrder[b.severity]);
+    _lastPredictions = predictions;
+
+    if (listEl)  listEl.innerHTML  = renderPredictionItems(predictions);
+    if (panelEl) panelEl.innerHTML = renderRecommendationsPanel(predictions);
+    if (badgeEl) badgeEl.textContent = `${predictions.length} Previs${predictions.length === 1 ? 'ão' : 'ões'} Ativa${predictions.length === 1 ? '' : 's'}`;
+
+    const updatedEl = document.getElementById('analysis-updated-at');
+    if (updatedEl) updatedEl.innerHTML = `<i class="fas fa-clock" style="margin-right:0.35rem;"></i>Última análise: ${new Date().toLocaleTimeString('pt-BR')}`;
+
+    if (showResultModal) {
+        const critCount   = predictions.filter(p => p.severity === 'critical').length;
+        const correlated  = predictions.filter(p => p.hasActiveAlert).length;
+        openModal('Análise Concluída', `
+            <div style="text-align:center;padding:1rem;">
+                <i class="fas fa-check-circle" style="font-size:3rem;color:var(--success-color);margin-bottom:1rem;display:block;"></i>
+                <h3 style="margin-bottom:1rem;">Análise de IA Concluída</h3>
+                <div style="color:var(--text-secondary);line-height:2;text-align:left;display:inline-block;">
+                    <div>• ${predictions.length} previsão(ões) identificada(s) a partir da telemetria em tempo real</div>
+                    <div>• ${critCount} de severidade crítica</div>
+                    <div>• ${correlated} já correlacionada(s) a alertas ativos</div>
+                    <div>• Modelo: Regressão Linear sobre RxPower, tráfego e latência</div>
+                </div>
+            </div>
+        `, 'Fechar', closeModal);
+    }
+
+    return predictions;
+}
+
 function initAnalysisEvents() {
-    // ④ FILTRO DE PERÍODO
+    // ④ FILTRO DE PERÍODO — ajusta a janela de amostras usada na regressão e reprocessa a análise
     document.querySelectorAll('.time-range-selector .time-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             document.querySelectorAll('.time-range-selector .time-btn').forEach(b => b.classList.remove('active'));
@@ -928,7 +1065,11 @@ function initAnalysisEvents() {
             // Mostrar/ocultar painel de range customizado
             const customCard = document.getElementById('custom-range-card');
             if (customCard) customCard.style.display = AppState.currentTimeRange === 'custom' ? '' : 'none';
-            showToast(`Período alterado para: ${this.textContent.trim()}`, 'info');
+
+            if (AppState.currentTimeRange !== 'custom') {
+                showToast(`Período alterado para: ${this.textContent.trim()}`, 'info');
+                runPredictiveAnalysis();
+            }
         });
     });
 
@@ -939,31 +1080,23 @@ function initAnalysisEvents() {
         if (!start || !end) { showToast('Selecione as datas de início e fim.', 'warning'); return; }
         if (new Date(start) > new Date(end)) { showToast('A data de início deve ser anterior à data fim.', 'warning'); return; }
         showToast(`Filtro aplicado: ${start} até ${end}`, 'success');
+        runPredictiveAnalysis();
     });
 
-    // Executar análise
+    // Executar análise sob demanda
     const runBtn = document.getElementById('run-analysis-btn');
     if (runBtn) {
-        runBtn.addEventListener('click', function () {
+        runBtn.addEventListener('click', async function () {
             this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analisando...';
             this.disabled  = true;
-            setTimeout(() => {
-                this.innerHTML = '<i class="fas fa-play"></i> Executar Análise';
-                this.disabled  = false;
-                openModal('Análise Concluída', `
-                    <div style="text-align:center;padding:1rem;">
-                        <i class="fas fa-check-circle" style="font-size:3rem;color:var(--success-color);margin-bottom:1rem;display:block;"></i>
-                        <h3 style="margin-bottom:1rem;">Análise de IA Concluída</h3>
-                        <div style="color:var(--text-secondary);line-height:2;">
-                            <div>• 3 novas previsões identificadas</div>
-                            <div>• 2 recomendações geradas</div>
-                            <div>• Modelos atualizados com novos dados</div>
-                        </div>
-                    </div>
-                `, 'Fechar', closeModal);
-            }, 2000);
+            await runPredictiveAnalysis(true);
+            this.innerHTML = '<i class="fas fa-play"></i> Executar Análise';
+            this.disabled  = false;
         });
     }
+
+    // Carga inicial da análise ao entrar na página
+    runPredictiveAnalysis();
 }
 
 // ③ AGENDAR MANUTENÇÃO

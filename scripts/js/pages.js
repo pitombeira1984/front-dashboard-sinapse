@@ -519,8 +519,60 @@ function getAlertsContent() {
 }
 
 // ANÁLISE
+function renderPredictionItems(predictions) {
+    if (!predictions.length) {
+        return `<div style="text-align:center;color:var(--text-muted);padding:2rem;">
+            <i class="fas fa-check-circle" style="font-size:1.5rem;color:var(--success-color);margin-bottom:0.5rem;display:block;"></i>
+            Nenhuma tendência de degradação detectada nos dados monitorados.
+        </div>`;
+    }
+    return predictions.map(p => `
+        <div class="alert-item alert-${p.severity}">
+            <i class="fas ${p.severity === 'critical' ? 'fa-exclamation-circle' : p.severity === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'} alert-icon"></i>
+            <div class="alert-content">
+                <div class="alert-title">
+                    ${p.title}
+                    ${p.onuId ? `<button class="client-info-btn" onclick="openClientDrawer(${p.onuId})" title="Ver informações do cliente"><i class="fas fa-info-circle"></i></button>` : ''}
+                    ${p.hasActiveAlert ? '<span class="badge badge-critical" style="font-size:0.65rem;margin-left:0.4rem;">Alerta ativo</span>' : ''}
+                </div>
+                <div class="alert-description">${p.detail} • Previsão: ${p.etaLabel} • Confiança: ${p.confidence}%</div>
+            </div>
+            <button class="btn btn-secondary" style="font-size:0.75rem;padding:0.25rem 0.75rem;white-space:nowrap;" onclick="openScheduleMaintenanceModal('${escHtml(p.deviceTarget)}')">
+                <i class="fas fa-calendar-check"></i> Agendar
+            </button>
+        </div>`).join('');
+}
+
+function renderRecommendationsPanel(predictions) {
+    if (!predictions.length) {
+        return `<div style="background:var(--bg-surface);padding:1rem;border-radius:var(--border-radius);color:var(--text-secondary);font-size:0.875rem;">
+            Nenhuma ação recomendada no momento — todos os indicadores monitorados estão dentro da normalidade.
+        </div>`;
+    }
+    const top = predictions[0];
+    const stepsByKind = {
+        optical: ['Verificar conector óptico e possível curvatura de fibra', 'Limpar conectores (SC/APC) na ONU e no splitter', 'Medir potência óptica na CTO com power meter', 'Agendar manutenção preventiva antes do prazo previsto'],
+        traffic: ['Avaliar necessidade de upgrade de link/uplink', 'Balancear tráfego entre portas GPON disponíveis', 'Verificar políticas de QoS e contenção', 'Contatar operadora de backbone se aplicável'],
+        latency: ['Verificar congestionamento nos enlaces GPON', 'Analisar filas e políticas de QoS na OLT', 'Checar utilização de CPU/memória da OLT', 'Agendar diagnóstico de rede'],
+    };
+    const steps = stepsByKind[top.kind] || ['Investigar causa raiz', 'Agendar diagnóstico técnico'];
+    return `
+        <div style="background:var(--bg-surface);padding:1rem;border-radius:var(--border-radius);">
+            <div style="font-weight:600;margin-bottom:0.5rem;">Para ${escHtml(top.deviceTarget)}:</div>
+            <div style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1rem;">
+                ${steps.map((s, i) => `${i + 1}. ${s}`).join('<br>')}
+            </div>
+            <button class="btn btn-primary" style="font-size:0.875rem;" onclick="openScheduleMaintenanceModal('${escHtml(top.deviceTarget)}')">
+                <i class="fas fa-calendar-check"></i> Agendar Manutenção
+            </button>
+        </div>
+        ${predictions.length > 1 ? `<div style="margin-top:1rem;font-size:0.8rem;color:var(--text-muted);">+ ${predictions.length - 1} outra(s) previsão(ões) na lista ao lado.</div>` : ''}`;
+}
+
 function getAnalysisContent() {
-    const maintenances = MaintenanceStorage.getAll();
+    const maintenances  = MaintenanceStorage.getAll();
+    const devicesCount  = DeviceStorage.getAll().length;
+    const activeAlerts  = AlertStorage.getAll().filter(a => a.severity !== 'resolved').length;
     return `
         <header class="header">
             <div class="header-title">
@@ -531,6 +583,12 @@ function getAnalysisContent() {
                 <button class="btn btn-primary" id="run-analysis-btn"><i class="fas fa-play"></i> Executar Análise</button>
             </div>
         </header>
+
+        <div style="display:flex;gap:1.5rem;flex-wrap:wrap;color:var(--text-secondary);font-size:0.8rem;margin-bottom:1rem;">
+            <span><i class="fas fa-server" style="color:var(--primary-color);margin-right:0.35rem;"></i>${devicesCount} dispositivo(s) monitorado(s)</span>
+            <span><i class="fas fa-exclamation-triangle" style="color:var(--warning-color);margin-right:0.35rem;"></i>${activeAlerts} alerta(s) ativo(s)</span>
+            <span id="analysis-updated-at"><i class="fas fa-clock" style="margin-right:0.35rem;"></i>Aguardando análise...</span>
+        </div>
 
         <div class="time-range-selector">
             ${['24h','7d','30d','custom'].map(r => `
@@ -556,56 +614,23 @@ function getAnalysisContent() {
         <div class="card">
             <div class="section-header">
                 <h2 class="section-title">Previsões de Falhas</h2>
-                <div class="badge badge-warning">3 Previsões Ativas</div>
+                <div class="badge badge-warning" id="predictions-badge">Carregando...</div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
                 <div>
                     <h3 style="margin-bottom:1rem;font-size:1.125rem;">Próximas Falhas Previstas</h3>
-                    <div class="alerts-list">
-                        <div class="alert-item alert-warning">
-                            <i class="fas fa-exclamation-triangle alert-icon"></i>
-                            <div class="alert-content">
-                                <div class="alert-title">Falha Óptica em OLT-01</div>
-                                <div class="alert-description">Previsão: 3-5 dias • Confiança: 87%</div>
-                            </div>
-                            <button class="btn btn-secondary" style="font-size:0.75rem;padding:0.25rem 0.75rem;" onclick="openScheduleMaintenanceModal('OLT-01')">
-                                <i class="fas fa-calendar-check"></i> Agendar
-                            </button>
-                        </div>
-                        <div class="alert-item alert-warning">
-                            <i class="fas fa-exclamation-triangle alert-icon"></i>
-                            <div class="alert-content">
-                                <div class="alert-title">Saturação de Link em Rádio</div>
-                                <div class="alert-description">Previsão: 7-10 dias • Confiança: 72%</div>
-                            </div>
-                            <button class="btn btn-secondary" style="font-size:0.75rem;padding:0.25rem 0.75rem;" onclick="openScheduleMaintenanceModal('Rádio Backhaul')">
-                                <i class="fas fa-calendar-check"></i> Agendar
-                            </button>
-                        </div>
-                        <div class="alert-item alert-info">
-                            <i class="fas fa-info-circle alert-icon"></i>
-                            <div class="alert-content">
-                                <div class="alert-title">Memória Elevada no Switch Core</div>
-                                <div class="alert-description">Previsão: 14 dias • Confiança: 61%</div>
-                            </div>
-                            <button class="btn btn-secondary" style="font-size:0.75rem;padding:0.25rem 0.75rem;" onclick="openScheduleMaintenanceModal('Switch Core')">
-                                <i class="fas fa-calendar-check"></i> Agendar
-                            </button>
+                    <div class="alerts-list" id="predictions-list">
+                        <div style="text-align:center;color:var(--text-muted);padding:2rem;">
+                            <i class="fas fa-spinner fa-spin" style="margin-right:0.5rem;"></i>Analisando telemetria em tempo real...
                         </div>
                     </div>
                 </div>
                 <div>
                     <h3 style="margin-bottom:1rem;font-size:1.125rem;">Recomendações de Ação</h3>
-                    <div style="background:var(--bg-surface);padding:1rem;border-radius:var(--border-radius);">
-                        <div style="font-weight:600;margin-bottom:0.5rem;">Para OLT-01:</div>
-                        <div style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1rem;">
-                            1. Verificar fusão na porta 1/0/8<br>
-                            2. Limpar conectores ópticos<br>
-                            3. Agendar manutenção preventiva
+                    <div id="recommendations-panel">
+                        <div style="background:var(--bg-surface);padding:1rem;border-radius:var(--border-radius);color:var(--text-muted);font-size:0.875rem;">
+                            <i class="fas fa-spinner fa-spin" style="margin-right:0.5rem;"></i>Aguardando resultado da análise...
                         </div>
-                        <button class="btn btn-primary" style="font-size:0.875rem;" onclick="openScheduleMaintenanceModal('OLT-01')">
-                            <i class="fas fa-calendar-check"></i> Agendar Manutenção
-                        </button>
                     </div>
                 </div>
             </div>
