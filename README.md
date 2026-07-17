@@ -241,6 +241,40 @@ Análise preditiva orientada a dados reais e agendamento de manutenções. A pá
 - O prazo previsto (ETA) é derivado da inclinação real e do `intervalSeconds` informado pelo servidor, exibido em segundos/minutos/horas/dias conforme a urgência; a confiança exibida é o R² do ajuste.
 - Previsões já cobertas por um alerta ativo (`AlertStorage`) recebem a etiqueta "Alerta ativo".
 
+**Onde o cálculo acontece**
+
+- `linearRegression(values)` em `scripts/js/utils.js:128-141` — implementa a regressão linear simples (mínimos quadrados) e o R². Usa o índice de cada amostra na série (0, 1, 2...) como eixo X:
+
+  ```js
+  function linearRegression(values) {
+      const n = values.length;
+      if (n < 2) return { slope: 0, intercept: values[0] || 0, r2: 0 };
+      const xMean = (n - 1) / 2;
+      const yMean = values.reduce((a, b) => a + b, 0) / n;
+      let num = 0, den = 0;
+      for (let i = 0; i < n; i++) { num += (i - xMean) * (values[i] - yMean); den += (i - xMean) ** 2; }
+      const slope = den === 0 ? 0 : num / den;
+      const intercept = yMean - slope * xMean;
+      let ssTot = 0, ssRes = 0;
+      for (let i = 0; i < n; i++) { const pred = slope * i + intercept; ssRes += (values[i] - pred) ** 2; ssTot += (values[i] - yMean) ** 2; }
+      const r2 = ssTot === 0 ? 0 : Math.max(0, 1 - ssRes / ssTot);
+      return { slope, intercept, r2 };
+  }
+  ```
+
+  `slope` e `intercept` vêm da fórmula clássica de mínimos quadrados; `r2 = 1 - ssRes/ssTot` é a fração da variância explicada pela reta ajustada (0 a 1, nunca negativo).
+
+- `runPredictiveAnalysis()` em `scripts/js/events.js:952-1050` chama `linearRegression()` três vezes por ciclo de análise — uma para cada série (RxPower por ONU, tráfego de entrada da OLT-01, latência média da rede) — e converte o R² de cada uma em "confiança" (`Math.round(Math.min(97, Math.max(35, r2 * 100)))`, faixa 35–97%).
+- A **média do R²** ("confiança média" exibida no card de IA) é calculada em `scripts/js/events.js:1061-1063`, como a média aritmética simples da confiança de todas as previsões ativas no momento:
+
+  ```js
+  const avgConfidence = predictions.length
+      ? Math.round(predictions.reduce((sum, p) => sum + p.confidence, 0) / predictions.length)
+      : null;
+  ```
+
+  O resultado é renderizado por `renderAiModelCard()` em `scripts/js/pages.js:581-597`.
+
 **Previsões de Falhas**
 - Lista dinâmica (`predictions-list`) ordenada por severidade, com dispositivo/ONU real, tendência medida, ETA e confiança. ONUs com cliente cadastrado mostram o ícone ⓘ para abrir o drawer de cliente.
 - Cada previsão tem botão "Agendar", que abre o modal de manutenção com o dispositivo correspondente pré-selecionado (mesma lista de `DeviceStorage` usada em Dispositivos).
