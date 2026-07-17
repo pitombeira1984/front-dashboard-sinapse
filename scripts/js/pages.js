@@ -574,9 +574,30 @@ function renderRecommendationsPanel(predictions) {
         ${predictions.length > 1 ? `<div style="margin-top:1rem;font-size:0.8rem;color:var(--text-muted);">+ ${predictions.length - 1} outra(s) previsão(ões) na lista ao lado.</div>` : ''}`;
 }
 
+// Único modelo de IA de fato em produção: regressão linear (mínimos quadrados) sobre as
+// séries de RxPower, tráfego e latência (ver linearRegression em utils.js e
+// runPredictiveAnalysis em events.js). A "precisão" exibida é o R² médio das previsões
+// ativas — não um número decorativo fixo.
+function renderAiModelCard(avgConfidence) {
+    const acc = avgConfidence === null || avgConfidence === undefined ? null : avgConfidence;
+    return `
+        <div style="background:var(--bg-surface);padding:1.5rem;border-radius:var(--border-radius);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <div style="font-weight:600;">Regressão Linear</div>
+                <span class="badge badge-success">Ativo</span>
+            </div>
+            <div style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1rem;">Predição de degradação óptica, tráfego e latência por tendência (mínimos quadrados)</div>
+            <div style="font-size:0.875rem;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;"><span>Confiança média (previsões ativas):</span><span>${acc === null ? '--' : acc + '%'}</span></div>
+                <div style="width:100%;height:6px;background:var(--bg-elevated);border-radius:3px;">
+                    <div style="width:${acc === null ? 0 : acc}%;height:100%;background:var(--success-color);border-radius:3px;"></div>
+                </div>
+            </div>
+        </div>`;
+}
+
 function getAnalysisContent() {
     const maintenances  = MaintenanceStorage.getAll();
-    const devicesCount  = DeviceStorage.getAll().length;
     const activeAlerts  = AlertStorage.getAll().filter(a => a.severity !== 'resolved').length;
     return `
         <header class="header">
@@ -590,7 +611,7 @@ function getAnalysisContent() {
         </header>
 
         <div style="display:flex;gap:1.5rem;flex-wrap:wrap;color:var(--text-secondary);font-size:0.8rem;margin-bottom:1rem;">
-            <span><i class="fas fa-server" style="color:var(--primary-color);margin-right:0.35rem;"></i>${devicesCount} dispositivo(s) monitorado(s)</span>
+            <span id="analysis-devices-count"><i class="fas fa-server" style="color:var(--primary-color);margin-right:0.35rem;"></i>Contando dispositivos monitorados...</span>
             <span><i class="fas fa-exclamation-triangle" style="color:var(--warning-color);margin-right:0.35rem;"></i>${activeAlerts} alerta(s) ativo(s)</span>
             <span id="analysis-updated-at"><i class="fas fa-clock" style="margin-right:0.35rem;"></i>Aguardando análise...</span>
         </div>
@@ -656,23 +677,8 @@ function getAnalysisContent() {
 
         <div class="card">
             <div class="section-header"><h2 class="section-title">Modelos de IA Ativos</h2></div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;">
-                ${[['Isolation Forest','Detecção de anomalias em séries temporais','92.3'],
-                   ['Regressão Linear','Predição de degradação óptica','88.7'],
-                   ['LSTM Network','Previsão de tráfego de rede','85.1']].map(([name, desc, acc]) => `
-                    <div style="background:var(--bg-surface);padding:1.5rem;border-radius:var(--border-radius);">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-                            <div style="font-weight:600;">${name}</div>
-                            <span class="badge badge-success">Ativo</span>
-                        </div>
-                        <div style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1rem;">${desc}</div>
-                        <div style="font-size:0.875rem;">
-                            <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;"><span>Precisão:</span><span>${acc}%</span></div>
-                            <div style="width:100%;height:6px;background:var(--bg-elevated);border-radius:3px;">
-                                <div style="width:${acc}%;height:100%;background:var(--success-color);border-radius:3px;"></div>
-                            </div>
-                        </div>
-                    </div>`).join('')}
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;" id="ai-models-grid">
+                ${renderAiModelCard(null)}
             </div>
         </div>`;
 }

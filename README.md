@@ -226,7 +226,7 @@ O modal de criação/edição preenche automaticamente nome, operador (`<` / `>`
 Análise preditiva orientada a dados reais e agendamento de manutenções. A página consome os mesmos dados usados em Dispositivos e Alertas — não há previsões fixas ou fictícias.
 
 **Barra de contexto**
-- Abaixo do cabeçalho: contagem de dispositivos monitorados (`DeviceStorage`), alertas ativos (`AlertStorage`) e horário da última análise executada.
+- Abaixo do cabeçalho: contagem de dispositivos monitorados (todas as OLTs de `GET /api/olts/bandwidth` + todas as ONUs de `onuRxHistory` em `GET /api/device/history` — reflete a rede GPON inteira, não apenas o inventário cadastrado em Dispositivos), alertas ativos (`AlertStorage`) e horário da última análise executada.
 
 **Motor de previsão (regressão linear)**
 - A cada carga da página (ou clique em "Executar Análise"), o frontend busca `GET /api/device/history` (série de 120 amostras: RxPower por ONU, tráfego e latência da OLT-01) e `GET /api/olts/bandwidth`, e roda uma regressão linear (mínimos quadrados) sobre três séries:
@@ -259,7 +259,7 @@ Análise preditiva orientada a dados reais e agendamento de manutenções. A pá
 - Ação de cancelar manutenção com confirmação.
 
 **Modelos de IA Ativos**
-- Cards descritivos dos modelos em uso: Isolation Forest, Regressão Linear (o modelo efetivamente aplicado nas previsões acima) e LSTM Network.
+- Exibe apenas o modelo efetivamente em produção: Regressão Linear. A "confiança média" do card é calculada em tempo real como a média do R² das previsões ativas (não um número fixo).
 
 **Executar Análise**
 - Botão no cabeçalho recalcula a análise com dados atualizados do servidor e exibe modal de resumo com a contagem real de previsões, quantas são críticas e quantas já estão correlacionadas a alertas ativos.

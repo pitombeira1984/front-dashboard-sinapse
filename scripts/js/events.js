@@ -959,6 +959,17 @@ async function runPredictiveAnalysis(showResultModal = false) {
     const SAMPLE_INTERVAL_SEC = history?.intervalSeconds || (API.POLL_INTERVAL / 1000);
     const activeAlerts = AlertStorage.getAll().filter(a => a.severity !== 'resolved');
 
+    // Total de dispositivos efetivamente monitorados: todas as OLTs + todas as ONUs
+    // com telemetria ativa (RxPower), refletindo a rede GPON inteira, não apenas o
+    // inventário cadastrado em Dispositivos.
+    const devicesCountEl = document.getElementById('analysis-devices-count');
+    if (devicesCountEl) {
+        const oltCount = (oltBw || []).length;
+        const onuCount = (history?.onuRxHistory || []).length;
+        const totalMonitored = oltCount + onuCount;
+        devicesCountEl.innerHTML = `<i class="fas fa-server" style="color:var(--primary-color);margin-right:0.35rem;"></i>${totalMonitored} dispositivo(s) monitorado(s) (${oltCount} OLT${oltCount === 1 ? '' : 's'} + ${onuCount} ONU${onuCount === 1 ? '' : 's'})`;
+    }
+
     const predictions = [];
 
     // 1 — Degradação óptica por ONU (tendência de queda no RxPower)
@@ -1044,6 +1055,14 @@ async function runPredictiveAnalysis(showResultModal = false) {
 
     if (listEl)  listEl.innerHTML  = renderPredictionItems(predictions);
     if (panelEl) panelEl.innerHTML = renderRecommendationsPanel(predictions);
+
+    const modelsGridEl = document.getElementById('ai-models-grid');
+    if (modelsGridEl) {
+        const avgConfidence = predictions.length
+            ? Math.round(predictions.reduce((sum, p) => sum + p.confidence, 0) / predictions.length)
+            : null;
+        modelsGridEl.innerHTML = renderAiModelCard(avgConfidence);
+    }
     if (badgeEl) badgeEl.textContent = `${predictions.length} Previs${predictions.length === 1 ? 'ão' : 'ões'} Ativa${predictions.length === 1 ? '' : 's'}`;
 
     const updatedEl = document.getElementById('analysis-updated-at');
