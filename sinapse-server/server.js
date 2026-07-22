@@ -43,6 +43,7 @@ const ALLOWED_ORIGINS = [
     'http://localhost:5500',   // Live Server VS Code
     'http://127.0.0.1:5500',
     'https://pitombeira1984.github.io', // GitHub Pages
+    'https://front-dashboard-sinapse-production.up.railway.app', // Railway (produção)
 ];
 app.use(cors({
     origin: (origin, cb) => {
